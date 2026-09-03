@@ -1,0 +1,16 @@
+# Self-hosted LiveKit SFU config for local/dev. Real deployments should move
+# keys to a secrets manager, enable TURN (turn.enabled + a real cert) for
+# clients behind restrictive/symmetric NATs, and widen/adjust port_range_start
+# /port_range_end + rtc.use_external_ip for the actual host network.
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  use_external_ip: false
+
+keys:
+  devkey: devsecret1234567890devsecret1234
+
+# Dev-only signing keys above must match LIVEKIT_API_KEY / LIVEKIT_API_SECRET
+# in docker-compose.dev.yml and apps/api/.env.

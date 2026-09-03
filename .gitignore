@@ -1,0 +1,34 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+server.env
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Expo / React Native
+.expo/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# ML artifacts
+apps/ml-service/app/ml/models/artifacts/*
+!apps/ml-service/app/ml/models/artifacts/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

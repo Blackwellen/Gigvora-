@@ -1,0 +1,27 @@
+import { asyncHandler } from '../../common/utils/asyncHandler.js';
+import * as service from './offers.service.js';
+
+export const getHandler = asyncHandler(async (req, res) => {
+  const record = await service.getById(req.params.id);
+  res.json({ data: record });
+});
+
+export const byApplicationHandler = asyncHandler(async (req, res) => {
+  const records = await service.listByApplication(req.params.applicationId);
+  res.json({ data: records });
+});
+
+export const createHandler = asyncHandler(async (req, res) => {
+  const record = await service.create(req.body, req.user.sub);
+  res.status(201).json({ data: record });
+});
+
+export const updateHandler = asyncHandler(async (req, res) => {
+  const record = await service.update(req.params.id, req.body, req.user.sub);
+  res.json({ data: record });
+});
+
+export const approveHandler = asyncHandler(async (req, res) => {
+  const record = await service.approve(req.params.id, req.user.sub, req.body);
+  res.status(201).json({ data: record });
+});

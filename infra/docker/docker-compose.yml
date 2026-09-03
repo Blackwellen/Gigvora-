@@ -1,0 +1,142 @@
+name: gigvora
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gigvora-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gigvora
+      POSTGRES_PASSWORD: gigvora
+      POSTGRES_DB: gigvora
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gigvora"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: gigvora-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: gigvora-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: gigvora
+      MINIO_ROOT_PASSWORD: gigvora123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 gigvora gigvora123 &&
+      mc mb -p local/gigvora-uploads &&
+      mc anonymous set download local/gigvora-uploads
+      "
+
+  api:
+    build:
+      context: ../../apps/api
+    container_name: gigvora-api
+    restart: unless-stopped
+    env_file:
+      - ../../apps/api/.env
+    environment:
+      DATABASE_URL: postgres://gigvora:gigvora@postgres:5432/gigvora
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../../apps/api
+    container_name: gigvora-worker
+    restart: unless-stopped
+    command: ["node", "src/workers.js"]
+    env_file:
+      - ../../apps/api/.env
+    environment:
+      DATABASE_URL: postgres://gigvora:gigvora@postgres:5432/gigvora
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ml-service:
+    build:
+      context: ../../apps/ml-service
+    container_name: gigvora-ml-service
+    restart: unless-stopped
+    env_file:
+      - ../../apps/ml-service/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://gigvora:gigvora@postgres:5432/gigvora
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../../apps/web
+    container_name: gigvora-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      NEXT_PUBLIC_WS_URL: http://localhost:4000
+      # Server-only: Next.js SSR runs inside this container, where
+      # "localhost" is this container, not the api container.
+      API_INTERNAL_URL: http://api:4000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { requireAuth } from '../../common/middleware/auth.js';
+import { getHandler, byApplicationHandler, createHandler, updateHandler, scorecardHandler } from './interviews.controller.js';
+
+const router = Router();
+router.use(requireAuth);
+
+router.get('/by-application/:applicationId', byApplicationHandler);
+
+router.get('/:id', getHandler);
+router.post('/', createHandler);
+router.patch('/:id', updateHandler);
+router.post('/:id/scorecard', scorecardHandler);
+
+export default router;

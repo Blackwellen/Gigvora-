@@ -1,0 +1,210 @@
+name: gigvora-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gigvora-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: gigvora
+      POSTGRES_PASSWORD: gigvora
+      POSTGRES_DB: gigvora
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gigvora"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: gigvora-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: gigvora-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: gigvora
+      MINIO_ROOT_PASSWORD: gigvora123
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 gigvora gigvora123 &&
+      (mc mb -p local/gigvora-uploads || true) &&
+      mc anonymous set download local/gigvora-uploads
+      "
+
+  # Self-hosted LiveKit SFU (open-source, no usage caps) backing Call Room
+  # (10.10). Dev mode generates its own room state in-memory — fine for
+  # local/dev; a real deployment should run it with persistent Redis-backed
+  # config and TURN configured for restrictive networks (see livekit.yaml).
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: gigvora-livekit-dev
+    restart: always
+    command: --config /etc/livekit.yaml --node-ip 127.0.0.1
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880" # signaling (WebSocket/HTTP)
+      - "7881:7881" # RTC TCP fallback
+      - "50000-50100:50000-50100/udp" # WebRTC media (narrowed range for local dev)
+
+  api:
+    image: node:20-alpine
+    container_name: gigvora-api-dev
+    restart: always
+    working_dir: /app
+    env_file:
+      - ../../apps/api/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://gigvora:gigvora@postgres:5432/gigvora
+      DB_HOST: postgres
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      LIVEKIT_URL: ws://localhost:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: devsecret1234567890devsecret1234
+      # apps/api/.env sets STORAGE_PROVIDER=r2 with real (but bucket-less)
+      # Cloudflare R2 credentials for non-local environments. Local dev must
+      # override the provider itself, not just S3_ENDPOINT/S3_PUBLIC_URL below
+      # — config/index.js picks the whole r2 vs s3 sub-config by provider, so
+      # leaving it unset here silently ignored the MinIO endpoint entirely and
+      # sent every upload to a live R2 bucket that doesn't exist (404
+      # NoSuchBucket). S3_* credential/bucket env vars are intentionally left
+      # unset — config/index.js's s3 defaults already match minio-init's
+      # gigvora/gigvora123/gigvora-uploads setup below.
+      STORAGE_PROVIDER: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: http://localhost:9002/gigvora-uploads
+      WEB_URL: http://localhost:3000
+      ML_SERVICE_URL: http://ml-service:8000
+    volumes:
+      - ../../apps/api:/app
+      - api_node_modules:/app/node_modules
+    ports:
+      - "4000:4000"
+    command: sh -c "npm config set fetch-retries 5 fetch-retry-mintimeout 20000 fetch-retry-maxtimeout 120000 fetch-timeout 300000 maxsockets 6 && npm install && npm run migrate && npm run dev"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+
+  worker:
+    image: node:20-alpine
+    container_name: gigvora-worker-dev
+    restart: always
+    working_dir: /app
+    env_file:
+      - ../../apps/api/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://gigvora:gigvora@postgres:5432/gigvora
+      DB_HOST: postgres
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      STORAGE_PROVIDER: s3
+      S3_ENDPOINT: http://minio:9000
+    volumes:
+      - ../../apps/api:/app
+      - api_node_modules:/app/node_modules
+    command: sh -c "npm install && npx nodemon --watch src src/workers.js"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ml-service:
+    image: python:3.12-slim
+    container_name: gigvora-ml-service-dev
+    restart: always
+    working_dir: /app
+    env_file:
+      - ../../apps/ml-service/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://gigvora:gigvora@postgres:5432/gigvora
+      REDIS_URL: redis://redis:6379
+      API_SERVICE_URL: http://api:4000
+    volumes:
+      - ../../apps/ml-service:/app
+      - ml_pip_cache:/root/.cache/pip
+    ports:
+      - "8000:8000"
+    command: sh -c "pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    image: node:20-alpine
+    container_name: gigvora-web-dev
+    restart: always
+    working_dir: /app
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      NEXT_PUBLIC_WS_URL: http://localhost:4000
+      # Server-only (not exposed to the browser bundle): the browser reaches
+      # the API via the published host port above, but Next.js server-side
+      # rendering runs inside this container, where "localhost" is this
+      # container, not the api container. Use the compose DNS name instead.
+      API_INTERNAL_URL: http://api:4000/api/v1
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ../../apps/web:/app
+      - web_node_modules:/app/node_modules
+      - web_next_cache:/app/.next
+    ports:
+      - "3000:3000"
+    command: sh -c "npm config set fetch-retries 5 fetch-retry-mintimeout 20000 fetch-retry-maxtimeout 120000 fetch-timeout 300000 maxsockets 6 && npm install && npm run dev -- -p 3000 -H 0.0.0.0"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  api_node_modules:
+  web_node_modules:
+  web_next_cache:
+  ml_pip_cache:

@@ -1,0 +1,32 @@
+{
+  "name": "gigvora",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Gigvora - social, professional network & recruitment platform",
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "apps/mobile",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:mobile": "npm run start --workspace=apps/mobile",
+    "dev": "concurrently \"npm:dev:api\" \"npm:dev:web\"",
+    "migrate": "npm run migrate --workspace=apps/api",
+    "seed": "npm run seed --workspace=apps/api",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "start": "docker compose -f infra/docker/docker-compose.dev.yml up -d --build",
+    "stop": "docker compose -f infra/docker/docker-compose.dev.yml down",
+    "logs": "docker compose -f infra/docker/docker-compose.dev.yml logs -f",
+    "status": "docker compose -f infra/docker/docker-compose.dev.yml ps"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
