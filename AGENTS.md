@@ -94,3 +94,5 @@ existing one. Ask first.
   changed, deploy pipeline replaced), fix this file to match reality
   as part of your change, and say so — don't silently leave it wrong
   for the next agent.
+
+<!-- CI/CD pipeline verified end-to-end: 2026-09-04T21:26:37Z -->
