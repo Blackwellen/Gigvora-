@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: gigvora
       POSTGRES_DB: gigvora
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +24,7 @@ services:
     container_name: gigvora-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -42,8 +42,8 @@ services:
       MINIO_ROOT_USER: gigvora
       MINIO_ROOT_PASSWORD: gigvora123
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -71,12 +71,16 @@ services:
     restart: unless-stopped
     env_file:
       - ../../apps/api/.env
-    environment:
-      DATABASE_URL: postgres://gigvora:gigvora@postgres:5432/gigvora
-      REDIS_URL: redis://redis:6379
-      S3_ENDPOINT: http://minio:9000
+    # NOTE: DATABASE_URL / REDIS_URL / S3_ENDPOINT / ML_SERVICE_URL are NOT
+    # overridden here on purpose — `environment:` takes precedence over
+    # `env_file:`, so hardcoding them here would silently clobber the real
+    # values (including the real Postgres password) set in apps/api/.env.
+    # apps/api/.env must itself point at the in-network hostnames
+    # (postgres/redis/minio/ml-service) for this to work correctly.
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,9 +97,6 @@ services:
     command: ["node", "src/workers.js"]
     env_file:
       - ../../apps/api/.env
-    environment:
-      DATABASE_URL: postgres://gigvora:gigvora@postgres:5432/gigvora
-      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,11 +110,8 @@ services:
     restart: unless-stopped
     env_file:
       - ../../apps/ml-service/.env
-    environment:
-      DATABASE_URL: postgresql+psycopg2://gigvora:gigvora@postgres:5432/gigvora
-      REDIS_URL: redis://redis:6379
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -126,13 +124,17 @@ services:
     container_name: gigvora-web
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
-      NEXT_PUBLIC_WS_URL: http://localhost:4000
+      # NOTE: NEXT_PUBLIC_* vars must be baked in at `docker build` time (Next
+      # reads them from apps/web/.env.local in the build context, since
+      # compose `environment:` only applies at container *runtime* and has no
+      # effect on the client bundle). apps/web/.env.local on the server holds
+      # the real NEXT_PUBLIC_API_URL / NEXT_PUBLIC_WS_URL values.
+      #
       # Server-only: Next.js SSR runs inside this container, where
       # "localhost" is this container, not the api container.
       API_INTERNAL_URL: http://api:4000/api/v1
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - api
 
