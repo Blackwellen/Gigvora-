@@ -264,6 +264,14 @@ export async function promoteVersion(actorId, modelId, versionId, body) {
   await db('ml_model_versions').where({ id: versionId }).update({ stage: targetStage, updated_at: db.fn.now() });
 
   if (targetStage === 'production') {
+    const registryForPromotion = await db('model_registry').where({ id: modelId }).first();
+    if (registryForPromotion.champion_version_id && registryForPromotion.champion_version_id !== versionId) {
+      // The outgoing champion is no longer serving production traffic — keep `stage` truthful
+      // rather than leaving two rows both reading "production" (only one is ever the champion).
+      await db('ml_model_versions')
+        .where({ id: registryForPromotion.champion_version_id, stage: 'production' })
+        .update({ stage: 'deprecated', updated_at: db.fn.now() });
+    }
     await db('model_registry').where({ id: modelId }).update({ champion_version_id: versionId, status: 'active', updated_at: db.fn.now() });
   }
 
@@ -306,8 +314,13 @@ export async function rollback(actorId, modelId, body) {
   if (!targetVersion) throw new AppError('Rollback target version not found', 404);
 
   const before = { championVersionId: registry.champion_version_id };
+  if (registry.champion_version_id && registry.champion_version_id !== targetVersionId) {
+    await db('ml_model_versions')
+      .where({ id: registry.champion_version_id, stage: 'production' })
+      .update({ stage: 'deprecated', updated_at: db.fn.now() });
+  }
   await db('model_registry').where({ id: modelId }).update({ champion_version_id: targetVersionId, updated_at: db.fn.now() });
-  await db('ml_model_versions').where({ id: targetVersionId }).update({ stage: 'production' });
+  await db('ml_model_versions').where({ id: targetVersionId }).update({ stage: 'production', updated_at: db.fn.now() });
 
   const [event] = await db('ml_deployment_events')
     .insert({

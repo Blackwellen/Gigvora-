@@ -118,7 +118,7 @@ export default function IntelligenceOverviewPage() {
                       <td className="px-4 py-2.5 text-ink-600">{m.requests24h.toLocaleString()}</td>
                       <td className="px-4 py-2.5 text-ink-600">{m.avgLatencyMs != null ? `${m.avgLatencyMs}ms` : '—'}</td>
                       <td className="px-4 py-2.5 text-ink-600">
-                        {m.primaryMetric ? `${m.primaryMetric.name} ${m.primaryMetric.value}` : '—'}
+                        {m.primaryMetric && m.primaryMetric.value != null ? `${m.primaryMetric.name} ${m.primaryMetric.value}` : '—'}
                       </td>
                       <td className="px-4 py-2.5">
                         <Badge tone={STATUS_TONE[m.status] || 'neutral'}>{m.status}</Badge>

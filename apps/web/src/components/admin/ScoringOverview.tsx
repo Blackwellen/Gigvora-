@@ -9,6 +9,22 @@ import { Badge } from '@/components/ui/Badge';
 type Model = { id: string; model_name: string; status: string; capability: string | null };
 type Overview = { models: Model[]; source: string; [key: string]: unknown };
 
+// Domain tables like candidate_match_scores lead with UUID foreign keys (job_id, project_id,
+// candidate_user_id) before the fields an operator actually cares about (score, confidence,
+// review state) — a blind "first N columns" slice mostly showed IDs and a candidate email.
+// Prefer signal columns, then fall back to whatever's left, and never surface raw email/PII
+// columns in this technical operational view.
+const PRIORITY_PATTERNS = [/score/i, /confidence/i, /band/i, /stage/i, /status/i, /decision/i, /reviewed/i, /override/i, /created_at/i];
+const HIDDEN_PATTERNS = [/email/i, /_user_id$/i, /^id$/i];
+
+function pickDisplayColumns(sample: Record<string, unknown> | undefined, max = 6): string[] {
+  if (!sample) return [];
+  const keys = Object.keys(sample).filter((k) => !HIDDEN_PATTERNS.some((p) => p.test(k)));
+  const priority = keys.filter((k) => PRIORITY_PATTERNS.some((p) => p.test(k)));
+  const rest = keys.filter((k) => !priority.includes(k));
+  return [...priority, ...rest].slice(0, max);
+}
+
 /**
  * Shared shell for 26.09/26.10/26.11 — lead/candidate/opportunity scoring. These pages are
  * deliberately an OPERATIONAL VIEW onto scores already computed by their owning domain tables
@@ -43,6 +59,7 @@ export function ScoringOverview({ endpoint, recordsKey, title, description }: { 
   }
 
   const records = (data[recordsKey] as Record<string, unknown>[]) || [];
+  const columns = pickDisplayColumns(records[0]);
 
   return (
     <div className="space-y-5">
@@ -83,25 +100,21 @@ export function ScoringOverview({ endpoint, recordsKey, title, description }: { 
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-ink-100 uppercase tracking-wide text-ink-400">
-                  {Object.keys(records[0])
-                    .slice(0, 6)
-                    .map((k) => (
-                      <th key={k} className="px-4 py-2 font-semibold">
-                        {k}
-                      </th>
-                    ))}
+                  {columns.map((k) => (
+                    <th key={k} className="px-4 py-2 font-semibold">
+                      {k}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {records.slice(0, 20).map((r, i) => (
                   <tr key={i} className="border-b border-ink-50 last:border-0">
-                    {Object.keys(records[0])
-                      .slice(0, 6)
-                      .map((k) => (
-                        <td key={k} className="px-4 py-2 text-ink-600">
-                          {String(r[k] ?? '—')}
-                        </td>
-                      ))}
+                    {columns.map((k) => (
+                      <td key={k} className="px-4 py-2 text-ink-600">
+                        {String(r[k] ?? '—')}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>

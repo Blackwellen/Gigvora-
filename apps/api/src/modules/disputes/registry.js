@@ -32,6 +32,21 @@ const REGISTRY = {
   // Reserved for a future gig-payment/escrow domain — gigs currently has no
   // payment/escrow object to attach a dispute to (see modules/gigs), so this
   // is deliberately not wired to anything yet rather than faked.
+  marketplace_order: {
+    async getParties(objectId) {
+      const order = await db('marketplace_orders').where({ id: objectId }).first();
+      if (!order) throw new AppError('Order not found', 404);
+      const item = await db('marketplace_order_items').where({ order_id: objectId }).first('seller_id');
+      if (!item) throw new AppError('Order has no items', 422);
+      return { payerUserId: order.buyer_id, payeeUserId: item.seller_id, orderId: order.id };
+    },
+    async canResolve(objectId, userId) {
+      const item = await db('marketplace_order_items').where({ order_id: objectId }).first('shop_id');
+      if (!item) return false;
+      const membership = await db('marketplace_shop_members').where({ shop_id: item.shop_id, user_id: userId }).first();
+      return Boolean(membership) && ['owner', 'manager'].includes(membership.role);
+    },
+  },
 };
 
 export function getDisputeHandler(objectType) {

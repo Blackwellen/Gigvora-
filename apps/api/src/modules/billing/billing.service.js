@@ -85,7 +85,7 @@ export async function getOrCreateStripeCustomerId(userId) {
   return row.stripe_customer_id;
 }
 
-export async function createCheckoutSession(userId, { mode = 'subscription', priceId, quantity = 1, successUrl, cancelUrl } = {}) {
+export async function createCheckoutSession(userId, { mode = 'subscription', priceId, quantity = 1, successUrl, cancelUrl, metadata } = {}) {
   if (!priceId) throw new AppError('priceId is required', 422);
   if (!['subscription', 'payment'].includes(mode)) throw new AppError('mode must be "subscription" or "payment"', 422);
 
@@ -98,10 +98,13 @@ export async function createCheckoutSession(userId, { mode = 'subscription', pri
     success_url: successUrl || `${config.webUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl || `${config.webUrl}/billing/cancelled`,
     client_reference_id: userId,
-    metadata: { userId },
+    // `metadata` lets one-off `mode:'payment'` callers (e.g. speed-networking ticket purchases)
+    // attach their own reference so the webhook handler below can fulfill the right record —
+    // additive and optional, existing callers are unaffected.
+    metadata: { userId, ...metadata },
   });
 
-  return { url: session.url };
+  return { url: session.url, id: session.id };
 }
 
 export async function createPortalSession(userId, { returnUrl } = {}) {
@@ -190,6 +193,13 @@ export async function handleWebhookEvent(event) {
       if (session.subscription) {
         const subscription = await getStripe().subscriptions.retrieve(session.subscription);
         await upsertSubscriptionFromStripe(subscription);
+      }
+      // One-off payment fulfillment (e.g. speed-networking tickets) — dynamic import to avoid a
+      // hard cross-module dependency at load time; this branch is a no-op for every other
+      // `mode:'payment'`/`subscription'` checkout that doesn't carry a `ticketId`.
+      if (session.mode === 'payment' && session.metadata?.ticketId) {
+        const { fulfillTicketFromCheckout } = await import('../speed-networking/participation.service.js');
+        await fulfillTicketFromCheckout(session);
       }
       break;
     }

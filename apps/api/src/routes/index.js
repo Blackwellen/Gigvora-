@@ -124,6 +124,7 @@ import trustSafetyCasesRoutes from '../modules/trust/safetyCases.routes.js';
 import trustAppealsRoutes from '../modules/trust/appeals.routes.js';
 import trustOverviewRoutes from '../modules/trust/overview.routes.js';
 import intelligenceRoutes from '../modules/intelligence/intelligence.routes.js';
+import speedNetworkingRoutes from '../modules/speed-networking/speed-networking.routes.js';
 
 const router = Router();
 
@@ -266,5 +267,8 @@ router.use('/trust/reports', trustReportsRoutes);
 router.use('/trust/safety-cases', trustSafetyCasesRoutes);
 router.use('/trust/appeals', trustAppealsRoutes);
 router.use('/trust/overview', trustOverviewRoutes);
+
+// Speed Networking.
+router.use('/speed-networking', speedNetworkingRoutes);
 
 export default router;
