@@ -36,12 +36,21 @@ const TOP_LEVEL = [
   { key: 'network', label: 'Network', route: '/app/network', iconKey: 'users', order: 1, mega: true },
   { key: 'community', label: 'Community', route: '/app/pages', iconKey: 'globe', order: 2, mega: true },
   { key: 'work', label: 'Work', route: '/app/gigs', iconKey: 'briefcase', order: 3, mega: true },
+  // Domain 19 (Business Workspace, Hiring & Workforce Operations) — only
+  // visible to company/organization accounts. Previously there was no
+  // top-level entry point for this domain at all (it didn't exist yet).
+  { key: 'business', label: 'Business', route: '/app/business-home', iconKey: 'building', order: 4, mega: true, audience: ['company', 'organization'] },
+  // Domain 20/21 (Recruiter Standard & Pro) — only visible to recruiter
+  // accounts. Standard vs Pro sections below are further split by the
+  // 'recruiter_pro_tools' feature flag, same convention as work.hire's
+  // former recruiter-pro-upsell link.
+  { key: 'recruiter', label: 'Recruiter', route: '/app/recruiter-home', iconKey: 'user-search', order: 5, mega: true, audience: ['recruiter'] },
   // Formerly "Video" — relabelled "Interactive" and broadened beyond just
   // video (Videos, Shorts, Webinars, Podcasts). 'layers' better represents
   // that broader, multi-content-type scope than reusing 'video' or
   // 'sparkles' (already used elsewhere in this bar).
-  { key: 'interactive', label: 'Interactive', route: '/video-explore', iconKey: 'layers', order: 4, mega: true },
-  { key: 'experience', label: 'Experience', route: '/app/experience', iconKey: 'sparkles', order: 5, mega: true },
+  { key: 'interactive', label: 'Interactive', route: '/video-explore', iconKey: 'layers', order: 6, mega: true },
+  { key: 'experience', label: 'Experience', route: '/app/experience', iconKey: 'sparkles', order: 7, mega: true },
 ];
 
 const SECTIONS = {
@@ -146,12 +155,12 @@ const SECTIONS = {
     {
       key: 'work.find', title: 'Find Work', order: 0,
       links: [
-        // Placeholder: no dedicated Jobs UI yet — apps/api/src/modules/jobs
-        // already has real data, this points at the closest existing route.
-        { key: 'work.job-search', label: 'Job Search', route: '/app/gigs?tab=jobs', description: 'Search open roles', iconKey: 'search' },
+        // Domain 16 (Jobs Marketplace) is real and wired now — no longer a
+        // placeholder into /app/gigs.
+        { key: 'work.job-search', label: 'Job Search', route: '/app/job-search', description: 'Search open roles', iconKey: 'search' },
+        { key: 'work.recommended-jobs', label: 'Recommended Jobs', route: '/app/recommended-jobs', description: 'Jobs matched to your profile', iconKey: 'sparkles' },
         { key: 'work.gig-marketplace', label: 'Gig Marketplace', route: '/app/gigs', description: 'Browse open gigs', iconKey: 'zap' },
         { key: 'work.project-marketplace', label: 'Project Marketplace', route: '/app/projects', description: 'Browse open projects', iconKey: 'folder' },
-        { key: 'work.saved-items', label: 'Saved Items', route: '/app/saved-items', description: 'Everything you have saved', iconKey: 'bookmark' },
       ],
     },
     {
@@ -161,6 +170,9 @@ const SECTIONS = {
         { key: 'work.proposals', label: 'Proposals', route: '/app/gigs?tab=applications', description: 'Proposals you have sent', iconKey: 'send' },
         // Placeholder: no dedicated Contracts UI yet.
         { key: 'work.contracts', label: 'Contracts', route: '/app/gigs?tab=active', description: 'Active engagements', iconKey: 'check-circle' },
+        { key: 'work.saved-jobs', label: 'Saved Jobs', route: '/app/saved-jobs', description: 'Jobs you have bookmarked', iconKey: 'bookmark' },
+        { key: 'work.job-alerts', label: 'Job Alerts', route: '/app/job-alerts', description: 'Notify me of new matching jobs', iconKey: 'bell' },
+        { key: 'work.saved-items', label: 'Saved Items', route: '/app/saved-items', description: 'Everything you have saved', iconKey: 'bookmark' },
       ],
     },
     {
@@ -177,20 +189,130 @@ const SECTIONS = {
       ],
     },
     {
+      // Real Domain 16 (Jobs Marketplace) posting/management routes — this
+      // used to point at /app/gigs & /app/talent placeholders pending a
+      // real build; that build now exists. Deeper hiring/candidate/pipeline
+      // tooling lives in the dedicated 'business' and 'recruiter' top-level
+      // mega menus below (Domain 19/20/21) rather than being duplicated
+      // here — this column stays a lightweight "post + manage" entry point
+      // plus a cross-link into whichever of those workspaces applies.
       key: 'work.hire', title: 'Hire', order: 3, audience: ['recruiter', 'company', 'organization'],
       links: [
-        { key: 'work.post-job', label: 'Post a Job', route: '/app/gigs/new', description: 'Publish a new opportunity', iconKey: 'plus-circle' },
-        { key: 'work.manage-jobs', label: 'Manage Jobs', route: '/app/gigs?tab=mine', description: 'Jobs & gigs you have posted', iconKey: 'briefcase' },
-        { key: 'work.candidates', label: 'Candidates', route: '/app/talent?tab=candidates', description: 'Browse candidates', iconKey: 'users' },
-        { key: 'work.applicants', label: 'Applicants', route: '/app/talent?tab=applicants', description: 'People who applied to you', iconKey: 'user-check' },
-        { key: 'work.recruiter-dashboard', label: 'Recruiter Dashboard', route: '/app/talent', description: 'Your recruiting pipeline', iconKey: 'bar-chart' },
+        { key: 'work.post-job', label: 'Post a Job', route: '/app/create-job/new', description: 'Publish a new opportunity', iconKey: 'plus-circle' },
+        { key: 'work.manage-jobs', label: 'Manage Jobs', route: '/app/jobs-home', description: 'Jobs you have posted', iconKey: 'briefcase' },
+        { key: 'work.sponsor-job', label: 'Sponsor a Job', route: '/app/sponsored-job-setup/new', description: 'Boost visibility for an open role', iconKey: 'trending-up', audience: ['company', 'organization'] },
+        { key: 'work.business-workspace', label: 'Business Workspace', route: '/app/business-home', description: 'Teams, workforce & hiring operations', iconKey: 'building', audience: ['company', 'organization'] },
+        { key: 'work.recruiter-hub', label: 'Recruiter Hub', route: '/app/recruiter-home', description: 'Your recruiting workspace', iconKey: 'user-search', audience: ['recruiter'] },
+      ],
+    },
+  ],
+
+  // Domain 19 — Business Workspace, Hiring & Workforce Operations. Gated
+  // company/organization at the top-level already; sections here don't need
+  // to repeat that, but individual links keep no extra audience since every
+  // link is universal to the business workspace once inside it.
+  business: [
+    {
+      key: 'business.overview', title: 'Overview', order: 0,
+      links: [
+        { key: 'business.home', label: 'Business Home', route: '/app/business-home', description: 'Your organisation at a glance', iconKey: 'home' },
+        { key: 'business.dashboard', label: 'Business Dashboard', route: '/app/business-dashboard', description: 'Executive operational dashboard', iconKey: 'bar-chart' },
+        { key: 'business.organisation', label: 'Organisation', route: '/app/organisation', description: 'Company profile, roles & hierarchy', iconKey: 'building' },
+      ],
+    },
+    {
+      key: 'business.people', title: 'People', order: 1,
+      links: [
+        { key: 'business.teams', label: 'Teams', route: '/app/teams', description: 'Manage teams & capacity', iconKey: 'users' },
+        { key: 'business.departments', label: 'Departments', route: '/app/departments', description: 'Departments, headcount & budget', iconKey: 'layout-grid' },
+        { key: 'business.members', label: 'Members', route: '/app/members', description: 'Business users, roles & permissions', iconKey: 'user-check' },
+      ],
+    },
+    {
+      key: 'business.hiring', title: 'Hiring', order: 2,
+      links: [
+        { key: 'business.hiring-hub', label: 'Hiring', route: '/app/hiring', description: 'Cross-job pipeline & funnel', iconKey: 'briefcase' },
+        { key: 'business.talent-discovery', label: 'Talent Discovery', route: '/app/talent-discovery', description: 'Search & match candidates', iconKey: 'search' },
+        { key: 'business.applicants', label: 'Applicants', route: '/app/applicants', description: 'Every applicant across your jobs', iconKey: 'user-check' },
+        { key: 'business.talent-pools', label: 'Talent Pools', route: '/app/talent-pools', description: 'Organisation-owned candidate pools', iconKey: 'users-round' },
+      ],
+    },
+    {
+      key: 'business.selection', title: 'Selection', order: 3,
+      links: [
+        { key: 'business.shortlists', label: 'Shortlists', route: '/app/shortlists', description: 'Shortlisted candidates by role', iconKey: 'list-checks' },
+        { key: 'business.interviews', label: 'Interviews', route: '/app/interviews', description: 'Cross-job interview calendar', iconKey: 'calendar' },
+        { key: 'business.offers', label: 'Offers', route: '/app/offers', description: 'Offer approvals & status', iconKey: 'file-check' },
+      ],
+    },
+    {
+      key: 'business.operations', title: 'Operations', order: 4,
+      links: [
+        { key: 'business.projects', label: 'Projects', route: '/app/business-projects', description: 'Business project portfolio', iconKey: 'folder' },
+        { key: 'business.spend', label: 'Spend', route: '/app/spend', description: 'Budgets, spend & anomalies', iconKey: 'credit-card' },
+        { key: 'business.analytics', label: 'Business Analytics', route: '/app/business-analytics', description: 'Hiring, workforce & spend analytics', iconKey: 'trending-up' },
+        { key: 'business.workforce-planning', label: 'Workforce Planning', route: '/app/workforce-planning', description: 'Headcount & scenario planning', iconKey: 'sliders' },
+      ],
+    },
+  ],
+
+  // Domain 20/21 — Recruiter Standard & Recruiter Pro. Standard sections are
+  // visible to any recruiter account; the Pro sections/links carry
+  // requiredFeature: 'recruiter_pro_tools' (see billing/entitlements.js) so
+  // a Standard-tier recruiter sees an "Upgrade to Recruiter Pro" link
+  // instead, matching the hideIfFeature pattern used elsewhere in this seed.
+  recruiter: [
+    {
+      key: 'recruiter.candidates', title: 'Candidates', order: 0,
+      links: [
+        { key: 'recruiter.candidate-search', label: 'Candidate Search', route: '/app/candidate-search', description: 'Search the candidate database', iconKey: 'search' },
+        { key: 'recruiter.saved-candidates', label: 'Saved Candidates', route: '/app/saved-candidates', description: 'Candidates you have saved', iconKey: 'bookmark' },
+        { key: 'recruiter.talent-pools', label: 'Talent Pools', route: '/app/recruiter-talent-pools', description: 'Your personal candidate pools', iconKey: 'users-round' },
+        { key: 'recruiter.shortlists', label: 'Shortlists', route: '/app/recruiter-shortlists', description: 'Shortlists across your projects', iconKey: 'list-checks' },
+      ],
+    },
+    {
+      key: 'recruiter.workspace', title: 'Workspace', order: 1,
+      links: [
+        { key: 'recruiter.inbox', label: 'Recruiter Inbox', route: '/app/recruiter-inbox', description: 'Candidate conversations', iconKey: 'inbox' },
+        { key: 'recruiter.search-alerts', label: 'Search Alerts', route: '/app/search-alerts', description: 'Get notified of new matches', iconKey: 'bell' },
+        { key: 'recruiter.projects', label: 'Recruiter Projects', route: '/app/recruiter-projects', description: 'Your active recruiting projects', iconKey: 'folder' },
+        { key: 'recruiter.analytics', label: 'Recruiter Analytics', route: '/app/recruiter-analytics', description: 'Your recruiting activity & conversion', iconKey: 'bar-chart' },
+      ],
+    },
+    {
+      key: 'recruiter.pro', title: 'Recruiter Pro', order: 2, requiredFeature: 'recruiter_pro_tools',
+      links: [
+        { key: 'recruiter.pro-home', label: 'Recruiter Pro Home', route: '/app/recruiter-pro-home', description: 'Your Pro command centre', iconKey: 'crown' },
+        { key: 'recruiter.advanced-search', label: 'Advanced Candidate Search', route: '/app/advanced-candidate-search', description: 'Boolean & semantic search', iconKey: 'search' },
+        { key: 'recruiter.ai-matching', label: 'AI Candidate Matching', route: '/app/ai-candidate-matching', description: 'Explainable AI-ranked candidates', iconKey: 'sparkles' },
+        { key: 'recruiter.pipeline', label: 'Pipeline', route: '/app/pipeline', description: 'Realtime hiring pipeline board', iconKey: 'trello' },
+      ],
+    },
+    {
+      key: 'recruiter.outreach', title: 'Outreach & Automation', order: 3, requiredFeature: 'recruiter_pro_tools',
+      links: [
+        { key: 'recruiter.bulk-outreach', label: 'Bulk Outreach', route: '/app/bulk-outreach', description: 'Campaign outreach to candidates', iconKey: 'send' },
+        { key: 'recruiter.outreach-templates', label: 'Outreach Templates', route: '/app/outreach-templates', description: 'Reusable message templates', iconKey: 'file-text' },
+        { key: 'recruiter.sequences', label: 'Sequences', route: '/app/sequences', description: 'Multi-step outreach automation', iconKey: 'workflow' },
+      ],
+    },
+    {
+      key: 'recruiter.pro-operations', title: 'Pro Operations', order: 4, requiredFeature: 'recruiter_pro_tools',
+      links: [
+        { key: 'recruiter.collaboration', label: 'Team Collaboration', route: '/app/team-collaboration', description: 'Shared notes, reviews & tasks', iconKey: 'users' },
+        { key: 'recruiter.candidate-activity', label: 'Candidate Activity', route: '/app/candidate-activity', description: 'Unified candidate engagement history', iconKey: 'activity' },
+        { key: 'recruiter.advanced-alerts', label: 'Advanced Alerts', route: '/app/advanced-alerts', description: 'Talent signals & pipeline risk alerts', iconKey: 'alert-triangle' },
+        { key: 'recruiter.pro-analytics', label: 'Recruiter Pro Analytics', route: '/app/recruiter-pro-analytics', description: 'Deep sourcing & conversion analytics', iconKey: 'trending-up' },
+        { key: 'recruiter.ats-integrations', label: 'ATS Integrations', route: '/app/settings/ats-integrations', description: 'Connect Greenhouse, Lever & more', iconKey: 'plug' },
+      ],
+    },
+    {
+      key: 'recruiter.upgrade', title: 'Upgrade', order: 5, hideIfFeature: 'recruiter_pro_tools',
+      links: [
         {
-          key: 'work.recruiter-pro-upsell', label: 'Upgrade to Recruiter Pro', route: '/app/recruiter-pro',
-          description: 'AI candidate search, talent pools & workflow automation', iconKey: 'crown',
-          // 'recruiter_pro_tools' is the feature key PLAN_FEATURES.recruiter_pro
-          // actually grants (see apps/api/src/modules/billing/entitlements.js)
-          // — not the plan_key 'recruiter_pro' itself.
-          hideIfFeature: 'recruiter_pro_tools',
+          key: 'recruiter.upgrade-link', label: 'Upgrade to Recruiter Pro', route: '/app/upgrade-to-recruiter-pro',
+          description: 'AI matching, pipelines, bulk outreach & ATS integrations', iconKey: 'crown',
         },
       ],
     },
@@ -290,6 +412,10 @@ export async function seed(knex) {
           label: section.title,
           order_index: section.order,
           audience: JSON.stringify(section.audience || []),
+          metadata: JSON.stringify({
+            ...(section.requiredFeature ? { requiredFeature: section.requiredFeature } : {}),
+            ...(section.hideIfFeature ? { hideIfFeature: section.hideIfFeature } : {}),
+          }),
         })
         .returning(['id']);
 

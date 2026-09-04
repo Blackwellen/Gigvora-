@@ -1,144 +1,134 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Flag, Loader2, MessageSquarePlus } from 'lucide-react';
-import { ProfessionalProfileShell } from '@/components/profile/ProfessionalProfileShell';
-import { ProfileEmptyState } from '@/components/profile/ProfileEmptyState';
+import { CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { api, getApiErrorMessage } from '@/lib/api';
+import { Avatar } from '@/components/ui/Avatar';
+import { KpiCard, KpiGrid } from '@/components/ui/KpiCard';
+import { useRecommendations, useMyRecommendationRequests, useRequestRecommendation } from '@/hooks/trust/useTrust';
+import { PageHeader, PageContainer, TwoColumnLayout, LoadingBlock, EmptyState } from '@/components/trust/shared';
+import { cn } from '@/lib/cn';
 
-type Recommendation = {
-  id: string;
-  body: string;
-  relationship_type: string | null;
-  visibility: string;
-  verification_status: string;
-  status: string;
-  created_at: string;
-  author: { id: string; first_name: string; last_name: string; headline: string | null } | null;
-  endorsedSkills: Array<{ id: string; canonical_name: string }>;
-};
-
-const KEY = ['professional-profile', 'recommendations'];
+const TABS = [
+  { key: 'received', label: 'Received' },
+  { key: 'given', label: 'Given' },
+  { key: 'requests', label: 'Requests' },
+] as const;
 
 export default function RecommendationsPage() {
-  const queryClient = useQueryClient();
-  const [showRequest, setShowRequest] = useState(false);
-  const { data, isLoading } = useQuery({ queryKey: KEY, queryFn: async () => (await api.get<{ data: Recommendation[] }>('/professional-profile/me/recommendations')).data.data });
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('received');
+  const [requestPersonId, setRequestPersonId] = useState('');
+  const [requestMessage, setRequestMessage] = useState('');
 
-  const report = useMutation({
-    mutationFn: (id: string) => api.post(`/professional-profile/me/recommendations/${id}/report`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
-  });
+  const { data: received } = useRecommendations('received');
+  const { data: given } = useRecommendations('given');
+  const { data: requests } = useMyRecommendationRequests();
+  const requestRecommendation = useRequestRecommendation();
 
-  const published = (data || []).filter((r) => r.status === 'published');
-  const pending = (data || []).filter((r) => r.status === 'pending');
+  const list = tab === 'received' ? received : tab === 'given' ? given : undefined;
 
   return (
-    <ProfessionalProfileShell active="recommendations">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-base font-bold text-ink-900 dark:text-white">Recommendations</h2>
-          {!showRequest && (
-            <Button type="button" size="sm" onClick={() => setShowRequest(true)}>
-              <MessageSquarePlus className="h-4 w-4" /> Request recommendation
-            </Button>
-          )}
-        </div>
+    <PageContainer>
+      <PageHeader title="Recommendations" subtitle="Professional relationship statements from people you've worked with." />
 
-        {showRequest && <RequestForm onClose={() => setShowRequest(false)} />}
+      <TwoColumnLayout
+        main={
+          <>
+            <KpiGrid className="lg:grid-cols-3">
+              <KpiCard label="Recommendations received" value={received?.length ?? 0} />
+              <KpiCard label="Recommendations given" value={given?.length ?? 0} />
+              <KpiCard label="Verified relationships" value={(received || []).filter((r) => r.verificationStatus === 'relationship_verified').length} />
+            </KpiGrid>
 
-        {isLoading && (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
-          </div>
-        )}
+            <div className="flex flex-wrap gap-2 border-b border-ink-100 pb-3 dark:border-ink-800">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTab(t.key)}
+                  className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', tab === t.key ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300')}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-        {!isLoading && published.length === 0 && pending.length === 0 && !showRequest && (
-          <ProfileEmptyState title="No recommendations yet" body="Request a recommendation from a manager, client or colleague." actionLabel="Request recommendation" onAction={() => setShowRequest(true)} />
-        )}
-
-        {pending.length > 0 && (
-          <div className="rounded-panel border border-dashed border-ink-200 bg-white p-4 text-sm text-ink-500 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-400">
-            {pending.length} recommendation request{pending.length === 1 ? '' : 's'} pending a response.
-          </div>
-        )}
-
-        <div className="space-y-3">
-          {published.map((rec) => (
-            <Card key={rec.id} className="p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-ink-900 dark:text-white">
-                    {rec.author ? `${rec.author.first_name} ${rec.author.last_name}` : 'Former colleague'}
-                  </p>
-                  {rec.author?.headline && <p className="text-xs text-ink-400 dark:text-ink-500">{rec.author.headline}</p>}
-                  {rec.relationship_type && <p className="text-xs text-ink-400 dark:text-ink-500">{rec.relationship_type.replace(/_/g, ' ')}</p>}
-                </div>
-                <div className="flex items-center gap-2">
-                  {rec.verification_status === 'relationship_verified' && <Badge tone="success">Verified relationship</Badge>}
-                  <Button type="button" size="icon" variant="ghost" aria-label="Report" onClick={() => report.mutate(rec.id)}>
-                    <Flag className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+            {tab === 'requests' ? (
+              <div className="space-y-3">
+                <Card className="p-4">
+                  <p className="font-display text-sm font-bold text-ink-900 dark:text-white">Request a recommendation</p>
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                    <input
+                      placeholder="Person's user ID"
+                      value={requestPersonId}
+                      onChange={(e) => setRequestPersonId(e.target.value)}
+                      className="h-10 rounded-lg border border-ink-200 bg-white px-3 text-sm dark:border-ink-700 dark:bg-ink-900"
+                    />
+                    <input
+                      placeholder="Personal message (optional)"
+                      value={requestMessage}
+                      onChange={(e) => setRequestMessage(e.target.value)}
+                      className="h-10 rounded-lg border border-ink-200 bg-white px-3 text-sm dark:border-ink-700 dark:bg-ink-900"
+                    />
+                    <Button
+                      size="sm"
+                      loading={requestRecommendation.isPending}
+                      onClick={() => requestRecommendation.mutate({ requestedPersonId: requestPersonId, message: requestMessage || undefined })}
+                    >
+                      Send request
+                    </Button>
+                  </div>
+                </Card>
+                {(requests || []).length === 0 ? (
+                  <EmptyState title="No pending requests" body="Requests you send will appear here until they're fulfilled." />
+                ) : (
+                  (requests || []).map((r) => (
+                    <Card key={r.id} className="p-4">
+                      <p className="text-sm font-semibold text-ink-900 dark:text-white">Request pending</p>
+                      {r.message && <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">{r.message}</p>}
+                      <Badge tone="warning" className="mt-2">Pending</Badge>
+                    </Card>
+                  ))
+                )}
               </div>
-              <p className="mt-2 text-sm text-ink-600 dark:text-ink-300">{rec.body}</p>
-              {rec.endorsedSkills.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {rec.endorsedSkills.map((s) => (
-                    <Badge key={s.id} tone="neutral">
-                      {s.canonical_name}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
-      </div>
-    </ProfessionalProfileShell>
-  );
-}
-
-function RequestForm({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [requestedPersonId, setRequestedPersonId] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: () => api.post('/professional-profile/me/recommendations/request', { requestedPersonId, message }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: KEY });
-      onClose();
-    },
-    onError: (err) => setError(getApiErrorMessage(err)),
-  });
-
-  return (
-    <Card className="p-5">
-      <p className="text-sm text-ink-500 dark:text-ink-400">Enter the user ID of the person you&rsquo;d like to request a recommendation from.</p>
-      <Input className="mt-2" placeholder="Person's user ID" value={requestedPersonId} onChange={(e) => setRequestedPersonId(e.target.value)} />
-      <textarea
-        placeholder="Add a personal note (optional)"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        rows={3}
-        className="mt-3 w-full rounded-control border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-ink-700 dark:bg-ink-900 dark:text-white"
+            ) : !list || list.length === 0 ? (
+              <EmptyState title="No recommendations yet" body="Recommendations from managers, colleagues and clients will appear here." />
+            ) : (
+              <div className="space-y-3">
+                {list.map((rec) => (
+                  <Card key={rec.id} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Avatar name={rec.author?.name || 'Member'} src={rec.author?.avatarUrl} size="md" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-ink-900 dark:text-white">{rec.author?.name || 'Gigvora member'}</p>
+                          {rec.verificationStatus === 'relationship_verified' && (
+                            <Badge tone="success"><CheckCircle2 className="mr-1 h-3 w-3" />Verified relationship</Badge>
+                          )}
+                        </div>
+                        {rec.author?.headline && <p className="text-xs text-ink-400 dark:text-ink-500">{rec.author.headline}</p>}
+                        <Badge tone="neutral" className="mt-1 capitalize">{rec.relationshipType.replace(/_/g, ' ')}</Badge>
+                        <p className="mt-2 text-sm text-ink-600 dark:text-ink-300">{rec.body}</p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        }
+        rail={
+          <Card className="p-4">
+            <p className="font-display text-sm font-bold text-ink-900 dark:text-white">About recommendations</p>
+            <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+              Recommendations are professional relationship statements, not marketplace star ratings. A relationship is only
+              marked verified when backed by a real shared employment or project record.
+            </p>
+          </Card>
+        }
       />
-      {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
-      <div className="mt-4 flex items-center gap-2">
-        <Button type="button" size="sm" onClick={() => mutation.mutate()} disabled={mutation.isPending || !requestedPersonId}>
-          {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Send request
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-      </div>
-    </Card>
+    </PageContainer>
   );
 }

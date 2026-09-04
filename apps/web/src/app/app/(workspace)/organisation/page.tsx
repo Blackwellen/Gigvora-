@@ -7,6 +7,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { CountrySelect } from '@/components/ui/CountrySelect';
 import { Modal, ModalHeader } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
 import {
@@ -70,7 +71,7 @@ function ProfileTab() {
 
   const canEdit = active?.type === 'organization' && (active.role === 'owner' || active.role === 'admin');
 
-  const [form, setForm] = useState({ name: '', description: '', website: '', industry: '', size: '', logo_url: '' });
+  const [form, setForm] = useState({ name: '', description: '', website: '', industry: '', size: '', logo_url: '', location: '', country_code: '' });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -82,6 +83,8 @@ function ProfileTab() {
         industry: workspace.industry || '',
         size: workspace.size || '',
         logo_url: workspace.logo_url || '',
+        location: workspace.location || '',
+        country_code: workspace.country_code || '',
       });
     }
   }, [workspace]);
@@ -97,6 +100,8 @@ function ProfileTab() {
         industry: form.industry || undefined,
         size: form.size || undefined,
         logo_url: form.logo_url || undefined,
+        location: form.location || undefined,
+        country_code: form.country_code || undefined,
       },
       { onSuccess: () => setSaved(true) }
     );
@@ -140,6 +145,14 @@ function ProfileTab() {
         <label className="block text-sm">
           <span className="mb-1 block font-semibold text-ink-700 dark:text-ink-200">Website</span>
           <Input value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} disabled={!canEdit} placeholder="https://" />
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1 block font-semibold text-ink-700 dark:text-ink-200">Location</span>
+          <Input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} disabled={!canEdit} placeholder="e.g. San Francisco, CA" />
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1 block font-semibold text-ink-700 dark:text-ink-200">Country</span>
+          <CountrySelect value={form.country_code || null} onChange={(v) => setForm((f) => ({ ...f, country_code: v || '' }))} className={!canEdit ? 'pointer-events-none opacity-60' : undefined} />
         </label>
         <label className="block text-sm">
           <span className="mb-1 block font-semibold text-ink-700 dark:text-ink-200">Logo URL</span>

@@ -8,6 +8,9 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { CategorySelect } from '@/components/ui/CategorySelect';
+import { CountrySelect } from '@/components/ui/CountrySelect';
+import { TagPicker } from '@/components/ui/TagPicker';
 import { useJob, useUpdateJob } from '@/hooks/jobs/useJob';
 import { getApiErrorMessage } from '@/lib/api';
 import type { JobEmploymentType, JobInput, JobSeniority, JobStatus, JobWorkMode } from '@/hooks/jobs/types';
@@ -119,6 +122,7 @@ function EditJobInner() {
       description: job.description,
       requirements: job.requirements || [],
       location: job.location || '',
+      country_code: job.country_code ?? undefined,
       employment_type: job.employment_type,
       work_mode: job.work_mode,
       salary_min: job.salary_min ?? undefined,
@@ -236,7 +240,7 @@ function EditJobInner() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Category">
-              <Input value={form.category || ''} onChange={(e) => set('category', e.target.value)} />
+              <CategorySelect value={form.category || null} onChange={(v) => set('category', v || undefined)} allowEmpty={false} />
             </Field>
             <Field label="Seniority">
               <select
@@ -283,7 +287,7 @@ function EditJobInner() {
             <ListEditor values={form.requirements || []} onChange={(v) => set('requirements', v)} placeholder="Add a requirement and press Enter" />
           </Field>
           <Field label="Skills">
-            <ListEditor values={form.skills || []} onChange={(v) => set('skills', v)} placeholder="Add a skill and press Enter" />
+            <TagPicker value={form.skills || []} onChange={(v) => set('skills', v)} placeholder="Add a skill and press Enter" />
           </Field>
         </div>
       </Section>
@@ -292,6 +296,9 @@ function EditJobInner() {
         <div className="grid grid-cols-2 gap-3">
           <Field label="Location">
             <Input value={form.location || ''} onChange={(e) => set('location', e.target.value)} />
+          </Field>
+          <Field label="Country">
+            <CountrySelect value={form.country_code || null} onChange={(v) => set('country_code', v || undefined)} emptyLabel="Select a country" />
           </Field>
           <Field label="Work mode">
             <select

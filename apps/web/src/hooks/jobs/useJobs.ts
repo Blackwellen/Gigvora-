@@ -7,6 +7,7 @@ import type { Job, JobEmploymentType, JobListMeta, JobSeniority, JobWorkMode } f
 export type JobsFilter = {
   q?: string;
   location?: string;
+  country_code?: string;
   work_mode?: JobWorkMode;
   employment_type?: JobEmploymentType;
   category?: string;

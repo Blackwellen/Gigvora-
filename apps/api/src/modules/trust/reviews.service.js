@@ -4,6 +4,7 @@ import { emitEvent } from '../../common/events/outbox.js';
 import { notify } from '../../modules/notifications/notify.js';
 import { recomputeReputationRollup } from './reputationRollup.service.js';
 import { scoreReviewAnomaly } from '../../common/ml/trustRiskClient.js';
+import { getProfileOwner, getOrCreateOwnProfileId, isOwnProfile } from './profileHelpers.js';
 
 const EDIT_WINDOW_DAYS = 14;
 
@@ -17,21 +18,69 @@ export async function listEligibleInteractions(userId) {
   const reviewedSet = new Set(alreadyReviewed.map((r) => `${r.context_type}:${r.context_id}`));
 
   const projects = await db('pm_projects')
-    .where({ status: 'completed' })
-    .andWhere((qb) => qb.where('owner_id', userId).orWhere('client_id', userId))
-    .select('id', 'name', 'completed_at')
+    .where('pm_projects.status', 'completed')
+    .andWhere((qb) => {
+      qb.where('owner_id', userId).orWhereExists(function () {
+        this.select(1).from('pm_project_members').whereRaw('pm_project_members.project_id = pm_projects.id').andWhere('pm_project_members.user_id', userId);
+      });
+    })
+    .select('pm_projects.id', 'pm_projects.name', 'pm_projects.actual_end_date', 'pm_projects.owner_id')
     .catch(() => []);
 
-  return projects
-    .filter((p) => !reviewedSet.has(`project:${p.id}`))
-    .map((p) => ({ contextType: 'project', contextId: p.id, label: p.name, completedAt: p.completed_at }));
+  const eligible = projects.filter((p) => !reviewedSet.has(`project:${p.id}`));
+  if (!eligible.length) return [];
+
+  // Resolve who the reviewable "other party" is for each project: if the caller is the
+  // owner, the subject is another member (preferring a client/professional role); otherwise
+  // the subject is the owner. Best-effort — a project with no resolvable counterpart is
+  // simply excluded rather than surfaced with a broken subject.
+  const otherMembers = await db('pm_project_members')
+    .whereIn('project_id', eligible.map((p) => p.id))
+    .andWhere('user_id', '!=', userId)
+    .select('project_id', 'user_id', 'role');
+  const membersByProject = new Map();
+  for (const m of otherMembers) {
+    if (!membersByProject.has(m.project_id)) membersByProject.set(m.project_id, []);
+    membersByProject.get(m.project_id).push(m);
+  }
+
+  const subjectUserIds = new Set();
+  const resolvedSubjectUserIdByProject = new Map();
+  for (const p of eligible) {
+    let subjectUserId = null;
+    if (p.owner_id === userId) {
+      const members = membersByProject.get(p.id) || [];
+      const preferred = members.find((m) => ['client', 'professional'].includes(m.role)) || members[0];
+      subjectUserId = preferred?.user_id || null;
+    } else {
+      subjectUserId = p.owner_id;
+    }
+    if (subjectUserId) {
+      resolvedSubjectUserIdByProject.set(p.id, subjectUserId);
+      subjectUserIds.add(subjectUserId);
+    }
+  }
+
+  const subjectProfiles = subjectUserIds.size
+    ? await db('profiles').whereIn('user_id', [...subjectUserIds]).select('id', 'user_id')
+    : [];
+  const profileIdByUserId = Object.fromEntries(subjectProfiles.map((p) => [p.user_id, p.id]));
+
+  return eligible
+    .map((p) => {
+      const subjectUserId = resolvedSubjectUserIdByProject.get(p.id);
+      const subjectProfileId = subjectUserId ? profileIdByUserId[subjectUserId] : null;
+      if (!subjectProfileId) return null;
+      return { contextType: 'project', contextId: p.id, label: p.name, completedAt: p.actual_end_date, subjectProfileId };
+    })
+    .filter(Boolean);
 }
 
 export async function listReviews({ viewerId, mode = 'received', subjectProfileId, rating, status, sort = 'recent', limit = 20, cursor }) {
   let query = db('reviews').select('reviews.*');
 
   if (mode === 'received') {
-    query = query.where('reviews.subject_profile_id', subjectProfileId || viewerId);
+    query = query.where('reviews.subject_profile_id', subjectProfileId || (await getOrCreateOwnProfileId(viewerId)));
   } else if (mode === 'written') {
     query = query.where('reviews.reviewer_person_id', viewerId);
   } else {
@@ -65,21 +114,25 @@ export async function listReviews({ viewerId, mode = 'received', subjectProfileI
   const page = rows.slice(0, limit);
 
   const reviewIds = page.map((r) => r.id);
-  const [ratings, responses, reviewers] = await Promise.all([
+  const [ratings, responses, reviewers, reviewerProfiles] = await Promise.all([
     reviewIds.length ? db('review_ratings').whereIn('review_id', reviewIds) : [],
     reviewIds.length ? db('review_responses').whereIn('review_id', reviewIds) : [],
     reviewIds.length
-      ? db('users').whereIn('id', page.map((r) => r.reviewer_person_id)).select('id', 'first_name', 'last_name', 'avatar_url')
+      ? db('users').whereIn('id', page.map((r) => r.reviewer_person_id)).select('id', 'first_name', 'last_name')
+      : [],
+    reviewIds.length
+      ? db('profiles').whereIn('user_id', page.map((r) => r.reviewer_person_id)).select('user_id', 'avatar_url')
       : [],
   ]);
   const reviewerById = Object.fromEntries(reviewers.map((u) => [u.id, u]));
+  const avatarByUserId = Object.fromEntries(reviewerProfiles.map((p) => [p.user_id, p.avatar_url]));
 
   return {
     data: page.map((r) => ({
       id: r.id,
       subjectProfileId: r.subject_profile_id,
       reviewer: reviewerById[r.reviewer_person_id]
-        ? { id: r.reviewer_person_id, name: `${reviewerById[r.reviewer_person_id].first_name} ${reviewerById[r.reviewer_person_id].last_name}`, avatarUrl: reviewerById[r.reviewer_person_id].avatar_url }
+        ? { id: r.reviewer_person_id, name: `${reviewerById[r.reviewer_person_id].first_name} ${reviewerById[r.reviewer_person_id].last_name}`, avatarUrl: avatarByUserId[r.reviewer_person_id] || null }
         : null,
       contextType: r.context_type,
       contextId: r.context_id,
@@ -113,12 +166,16 @@ export async function getReview(reviewId, viewerId) {
 
 export async function submitReview(userId, { contextType, contextId, subjectProfileId, overallRating, reviewText, aspectRatings = [] }) {
   if (!contextType || !contextId || !subjectProfileId) throw new AppError('contextType, contextId and subjectProfileId are required', 422);
-  if (subjectProfileId === userId) throw new AppError('You cannot review yourself', 422);
   if (!(overallRating >= 1 && overallRating <= 5)) throw new AppError('overallRating must be between 1 and 5', 422);
+  const subjectProfile = await getProfileOwner(subjectProfileId);
+  if (subjectProfile.user_id === userId) throw new AppError('You cannot review yourself', 422);
 
-  // Eligibility is re-checked server-side, never trusted from the client wizard (§14/§27).
+  // Eligibility (including who the resolved subject is) is re-checked server-side against
+  // the real interaction, never trusted from the client wizard (§14/§27).
   const eligible = await listEligibleInteractions(userId);
-  const isEligible = eligible.some((e) => e.contextType === contextType && String(e.contextId) === String(contextId));
+  const isEligible = eligible.some(
+    (e) => e.contextType === contextType && String(e.contextId) === String(contextId) && e.subjectProfileId === subjectProfileId
+  );
   if (!isEligible) throw new AppError('You are not eligible to review this interaction, or have already reviewed it', 403);
 
   let review;
@@ -155,7 +212,7 @@ export async function submitReview(userId, { contextType, contextId, subjectProf
     }
   }).catch(() => {});
 
-  await notify({ userId: subjectProfileId, actorId: userId, type: 'trust.review.received', payload: { reviewId: review.id, overallRating } });
+  await notify({ userId: subjectProfile.user_id, actorId: userId, type: 'trust.review.received', payload: { reviewId: review.id, overallRating } });
 
   return getReview(review.id, userId);
 }
@@ -214,12 +271,12 @@ export async function voteHelpful(reviewId, userId, isHelpful) {
 export async function respondToReview(reviewId, userId, responseText) {
   const review = await db('reviews').where({ id: reviewId }).first();
   if (!review) throw new AppError('Review not found', 404);
-  if (review.subject_profile_id !== userId) throw new AppError('Only the review subject may respond', 403);
+  if (!(await isOwnProfile(review.subject_profile_id, userId))) throw new AppError('Only the review subject may respond', 403);
   const existing = await db('review_responses').where({ review_id: reviewId }).first();
   if (existing) throw new AppError('A response has already been submitted for this review', 409);
 
   const [response] = await db('review_responses')
-    .insert({ review_id: reviewId, profile_id: userId, response_text: responseText })
+    .insert({ review_id: reviewId, profile_id: review.subject_profile_id, response_text: responseText })
     .returning('*');
   await emitEvent({ aggregateType: 'review', aggregateId: reviewId, eventType: 'trust.review.response_created', payload: { responseId: response.id } });
   await notify({ userId: review.reviewer_person_id, actorId: userId, type: 'trust.review.response_received', payload: { reviewId } });

@@ -16,7 +16,7 @@ export function useBusinessWorkspace() {
 }
 
 export type BusinessWorkspaceUpdate = Partial<
-  Pick<BusinessWorkspace, 'name' | 'description' | 'logo_url' | 'website' | 'industry' | 'size'>
+  Pick<BusinessWorkspace, 'name' | 'description' | 'logo_url' | 'website' | 'industry' | 'size' | 'location' | 'country_code'>
 >;
 
 export function useUpdateBusinessWorkspace() {

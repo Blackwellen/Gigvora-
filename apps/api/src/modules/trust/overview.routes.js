@@ -4,12 +4,14 @@ import { requirePlatformRole } from '../../common/middleware/requirePlatformRole
 import { asyncHandler } from '../../common/utils/asyncHandler.js';
 import * as overview from './overview.service.js';
 import { db } from '../../db/connection.js';
+import { getOrCreateOwnProfileId } from './profileHelpers.js';
 
 const router = Router();
 router.use(requireAuth);
 
 router.get('/me', asyncHandler(async (req, res) => {
-  res.json({ data: await overview.getTrustOverview('profile', req.user.sub) });
+  const ownProfileId = await getOrCreateOwnProfileId(req.user.sub);
+  res.json({ data: await overview.getTrustOverview('profile', ownProfileId) });
 }));
 
 router.get('/:subjectId/review-integrity', asyncHandler(async (req, res) => {

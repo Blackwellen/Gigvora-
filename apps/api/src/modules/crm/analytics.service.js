@@ -24,12 +24,12 @@ export async function overview(owner) {
     ownerScope(db('crm_opportunities'), owner).whereNull('closed_at').sum({ sum: 'value' }),
     ownerScope(db('crm_opportunities'), owner)
       .whereNotNull('closed_at')
-      .andWhereNotNull('win_reason')
+      .whereNotNull('win_reason')
       .andWhere('closed_at', '>=', db.raw("date_trunc('month', now())"))
       .count({ count: '*' }),
     ownerScope(db('crm_opportunities'), owner)
       .whereNotNull('closed_at')
-      .andWhereNotNull('win_reason')
+      .whereNotNull('win_reason')
       .andWhere('closed_at', '>=', db.raw("date_trunc('month', now())"))
       .sum({ sum: 'value' }),
     ownerScope(db('crm_followups'), owner).where({ status: 'open' }).andWhere('due_at', '<', db.fn.now()).count({ count: '*' }),
@@ -76,7 +76,7 @@ export async function winLossTrend(owner, { months = 6 } = {}) {
     .sum({ value: 'value' })
     .whereNotNull('closed_at')
     .andWhere('closed_at', '>=', db.raw(`now() - interval '${Number(months) || 6} months'`))
-    .groupBy(db.raw("date_trunc('month', closed_at)"), db.raw('(win_reason is not null)'))
+    .groupByRaw("date_trunc('month', closed_at), (win_reason is not null)")
     .orderBy('month', 'asc');
 
   const byMonth = new Map();

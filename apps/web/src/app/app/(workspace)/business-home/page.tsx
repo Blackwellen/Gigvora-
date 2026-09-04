@@ -29,7 +29,7 @@ const QUICK_LINKS: Array<{ href: string; label: string; description: string; ico
   { href: '/app/departments', label: 'Departments', description: 'Budgets, headcount targets and cost centers by department.', icon: Building2 },
   { href: '/app/members', label: 'Members', description: 'Everyone with access to this workspace, and their roles.', icon: Users },
   { href: '/app/hiring', label: 'Hiring', description: 'Open roles, hiring plans and time-to-hire across the business.', icon: Briefcase },
-  { href: '/app/talent', label: 'Talent Pools', description: 'Sourced candidates, referrals and silver medalists on tap.', icon: Waypoints },
+  { href: '/app/talent-pools', label: 'Talent Pools', description: 'Sourced candidates, referrals and silver medalists on tap.', icon: Waypoints },
   { href: '/app/crm-home', label: 'CRM', description: 'Contacts, leads, accounts, opportunities and pipeline in one workspace.', icon: Contact2 },
   { href: '/app/spend', label: 'Spend', description: 'Budgets, transactions and anomaly flags across departments.', icon: Wallet },
   { href: '/app/workforce-planning', label: 'Workforce Planning', description: 'Headcount plans, scenarios and AI-assisted forecasts.', icon: Target },

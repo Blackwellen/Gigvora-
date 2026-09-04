@@ -55,6 +55,9 @@ export async function startVerification(subjectType, subjectId, verificationType
 export async function submitVerification(verificationId, actorId, { method, provider, evidenceReference = [], claimData }) {
   const verification = await db('verifications').where({ id: verificationId }).first();
   if (!verification) throw new AppError('Verification not found', 404);
+  // Ownership check: a personal (subject_type 'user') verification may only be submitted by
+  // its own subject; business verifications are gated by company membership at the route layer.
+  if (verification.subject_type === 'user' && verification.subject_id !== actorId) throw new AppError('Forbidden', 403);
   assertTransition(verification.status, 'submitted');
 
   const [updated] = await db('verifications')

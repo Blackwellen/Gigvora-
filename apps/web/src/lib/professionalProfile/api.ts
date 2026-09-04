@@ -9,6 +9,7 @@ export type ProfileHero = {
   avatarUrl: string | null;
   coverUrl: string | null;
   location: string | null;
+  countryCode: string | null;
   timezone: string | null;
   industry: string | null;
   availabilityStatus: 'open_to_work' | 'open_to_projects' | 'not_available' | 'unspecified';

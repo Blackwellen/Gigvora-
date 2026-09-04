@@ -3,15 +3,20 @@ import { AppError } from '../../common/errors/AppError.js';
 import { emitEvent } from '../../common/events/outbox.js';
 import { notify } from '../../modules/notifications/notify.js';
 import { recomputeReputationRollup } from './reputationRollup.service.js';
+import { getProfileOwner, getOrCreateOwnProfileId, isOwnProfile } from './profileHelpers.js';
 
 const RELATIONSHIP_TYPES = [
   'managed_them', 'reported_to_them', 'worked_together', 'client', 'service_provider',
   'project_collaborator', 'mentor', 'student', 'business_partner', 'other',
 ];
 
+// recommendations.subject_profile_id / recommendation_requests.subject_profile_id reference
+// profiles.id (not users.id) — see reviews.service.js's profileHelpers.js comment for why
+// these can never be compared directly against an acting user's id.
+
 export async function listRecommendations({ userId, mode = 'received', status }) {
   let query = db('recommendations').select('recommendations.*');
-  if (mode === 'received') query = query.where('subject_profile_id', userId);
+  if (mode === 'received') query = query.where('subject_profile_id', await getOrCreateOwnProfileId(userId));
   else if (mode === 'given') query = query.where('author_person_id', userId);
   else throw new AppError('Invalid mode', 422);
 
@@ -19,16 +24,23 @@ export async function listRecommendations({ userId, mode = 'received', status })
   else if (mode === 'received') query = query.whereIn('status', ['published']);
 
   const rows = await query.orderBy('created_at', 'desc');
-  const people = await db('users')
-    .whereIn('id', rows.map((r) => (mode === 'received' ? r.author_person_id : r.subject_profile_id)))
-    .select('id', 'first_name', 'last_name', 'avatar_url', 'headline');
+  const personUserIds = rows.map((r) => r.author_person_id);
+  const subjectProfileIds = rows.map((r) => r.subject_profile_id);
+  const [people, authorProfiles, subjectProfiles] = await Promise.all([
+    db('users').whereIn('id', personUserIds).select('id', 'first_name', 'last_name', 'headline'),
+    db('profiles').whereIn('user_id', personUserIds).select('user_id', 'avatar_url'),
+    db('profiles').whereIn('id', subjectProfileIds).select('id', 'user_id'),
+  ]);
   const peopleById = Object.fromEntries(people.map((p) => [p.id, p]));
+  const avatarByUserId = Object.fromEntries(authorProfiles.map((p) => [p.user_id, p.avatar_url]));
+  const subjectUserByProfileId = Object.fromEntries(subjectProfiles.map((p) => [p.id, p.user_id]));
 
   return rows.map((r) => ({
     id: r.id,
     subjectProfileId: r.subject_profile_id,
+    subjectUserId: subjectUserByProfileId[r.subject_profile_id] || null,
     author: peopleById[r.author_person_id]
-      ? { id: r.author_person_id, name: `${peopleById[r.author_person_id].first_name} ${peopleById[r.author_person_id].last_name}`, avatarUrl: peopleById[r.author_person_id].avatar_url, headline: peopleById[r.author_person_id].headline }
+      ? { id: r.author_person_id, name: `${peopleById[r.author_person_id].first_name} ${peopleById[r.author_person_id].last_name}`, avatarUrl: avatarByUserId[r.author_person_id] || null, headline: peopleById[r.author_person_id].headline }
       : null,
     relationshipType: r.relationship_type,
     body: r.body,
@@ -42,18 +54,19 @@ export async function listRecommendations({ userId, mode = 'received', status })
 export async function requestRecommendation(userId, { requestedPersonId, message }) {
   if (!requestedPersonId) throw new AppError('requestedPersonId is required', 422);
   if (requestedPersonId === userId) throw new AppError('You cannot request a recommendation from yourself', 422);
+  const ownProfileId = await getOrCreateOwnProfileId(userId);
 
-  const existing = await db('recommendation_requests').where({ subject_profile_id: userId, requested_person_id: requestedPersonId }).first();
+  const existing = await db('recommendation_requests').where({ subject_profile_id: ownProfileId, requested_person_id: requestedPersonId }).first();
   if (existing && existing.status === 'pending') throw new AppError('You already have a pending request with this person', 409);
 
   const [request] = await db('recommendation_requests')
-    .insert({ subject_profile_id: userId, requested_person_id: requestedPersonId, message: message || null, status: 'pending' })
+    .insert({ subject_profile_id: ownProfileId, requested_person_id: requestedPersonId, message: message || null, status: 'pending' })
     .onConflict(['subject_profile_id', 'requested_person_id'])
     .merge({ message: message || null, status: 'pending', updated_at: db.fn.now() })
     .returning('*');
 
   await notify({ userId: requestedPersonId, actorId: userId, type: 'trust.recommendation.requested', payload: { requestId: request.id } });
-  await emitEvent({ aggregateType: 'recommendation_request', aggregateId: request.id, eventType: 'trust.recommendation.requested', payload: { subjectProfileId: userId } });
+  await emitEvent({ aggregateType: 'recommendation_request', aggregateId: request.id, eventType: 'trust.recommendation.requested', payload: { subjectProfileId: ownProfileId } });
   return request;
 }
 
@@ -63,8 +76,9 @@ export async function listMyRequests(userId) {
 
 export async function writeRecommendation(authorId, { subjectProfileId, relationshipType, body, visibility = 'public', skillIds = [] }) {
   if (!subjectProfileId || !body) throw new AppError('subjectProfileId and body are required', 422);
-  if (subjectProfileId === authorId) throw new AppError('You cannot write a recommendation for yourself', 422);
   if (relationshipType && !RELATIONSHIP_TYPES.includes(relationshipType)) throw new AppError('Invalid relationshipType', 422);
+  const subjectProfile = await getProfileOwner(subjectProfileId);
+  if (subjectProfile.user_id === authorId) throw new AppError('You cannot write a recommendation for yourself', 422);
 
   let recommendation;
   await db.transaction(async (trx) => {
@@ -91,14 +105,14 @@ export async function writeRecommendation(authorId, { subjectProfileId, relation
     await emitEvent({ aggregateType: 'recommendation', aggregateId: recommendation.id, eventType: 'trust.recommendation.created', payload: { subjectProfileId, authorId } }, trx);
   });
 
-  await notify({ userId: subjectProfileId, actorId: authorId, type: 'trust.recommendation.received', payload: { recommendationId: recommendation.id } });
+  await notify({ userId: subjectProfile.user_id, actorId: authorId, type: 'trust.recommendation.received', payload: { recommendationId: recommendation.id } });
   return recommendation;
 }
 
 export async function setVisibility(recommendationId, userId, visibility) {
   const rec = await db('recommendations').where({ id: recommendationId }).first();
   if (!rec) throw new AppError('Recommendation not found', 404);
-  if (rec.subject_profile_id !== userId) throw new AppError('Forbidden', 403);
+  if (!(await isOwnProfile(rec.subject_profile_id, userId))) throw new AppError('Forbidden', 403);
   const [updated] = await db('recommendations').where({ id: recommendationId }).update({ visibility, updated_at: db.fn.now() }).returning('*');
   return updated;
 }

@@ -115,6 +115,14 @@ import advancedAlertsRoutes from '../modules/advanced-alerts/advanced-alerts.rou
 import recruiterProAnalyticsRoutes from '../modules/recruiter-pro-analytics/recruiter-pro-analytics.routes.js';
 import atsIntegrationsRoutes from '../modules/ats-integrations/ats-integrations.routes.js';
 import crmRoutes from '../modules/crm/crm.routes.js';
+import trustReviewsRoutes from '../modules/trust/reviews.routes.js';
+import trustRecommendationsRoutes from '../modules/trust/recommendations.routes.js';
+import trustEndorsementsRoutes from '../modules/trust/endorsements.routes.js';
+import trustVerificationsRoutes from '../modules/trust/verifications.routes.js';
+import trustReportsRoutes from '../modules/trust/reports.routes.js';
+import trustSafetyCasesRoutes from '../modules/trust/safetyCases.routes.js';
+import trustAppealsRoutes from '../modules/trust/appeals.routes.js';
+import trustOverviewRoutes from '../modules/trust/overview.routes.js';
 import intelligenceRoutes from '../modules/intelligence/intelligence.routes.js';
 
 const router = Router();
@@ -248,5 +256,15 @@ router.use('/crm', crmRoutes);
 
 // Domain 26: Machine Learning, Matching, Ranking & Intelligence.
 router.use('/intelligence', intelligenceRoutes);
+
+// Domain 28: Trust, Reviews, Reputation, Verification & Safety.
+router.use('/trust/reviews', trustReviewsRoutes);
+router.use('/trust/recommendations', trustRecommendationsRoutes);
+router.use('/trust/endorsements', trustEndorsementsRoutes);
+router.use('/trust/verifications', trustVerificationsRoutes);
+router.use('/trust/reports', trustReportsRoutes);
+router.use('/trust/safety-cases', trustSafetyCasesRoutes);
+router.use('/trust/appeals', trustAppealsRoutes);
+router.use('/trust/overview', trustOverviewRoutes);
 
 export default router;

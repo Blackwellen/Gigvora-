@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Check, ExternalLink, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { CountrySelect } from '@/components/ui/CountrySelect';
 import { Card } from '@/components/ui/Card';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { fetchHero, PROFILE_HERO_KEY, PROFILE_TABS, type ProfileHero } from '@/lib/professionalProfile/api';
@@ -33,6 +34,7 @@ export default function EditProfilePage() {
   const [headline, setHeadline] = useState('');
   const [summary, setSummary] = useState('');
   const [location, setLocation] = useState('');
+  const [countryCode, setCountryCode] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,10 +43,11 @@ export default function EditProfilePage() {
     setHeadline(hero.headline || '');
     setSummary(hero.summary || '');
     setLocation(hero.location || '');
+    setCountryCode(hero.countryCode || null);
   }, [hero]);
 
   const saveAbout = useMutation({
-    mutationFn: () => api.patch('/professional-profile/me/about', { headline, bio: summary, location }),
+    mutationFn: () => api.patch('/professional-profile/me/about', { headline, bio: summary, location, countryCode }),
     onSuccess: (res) => {
       queryClient.setQueryData(PROFILE_HERO_KEY, res.data.data);
       setSaved(true);
@@ -123,7 +126,11 @@ export default function EditProfilePage() {
             </div>
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">Location</p>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} />
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Austin, TX" />
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">Country</p>
+              <CountrySelect value={countryCode} onChange={setCountryCode} emptyLabel="Select a country" />
             </div>
             {error && <p className="text-xs font-medium text-red-600">{error}</p>}
             <Button type="button" size="sm" onClick={() => saveAbout.mutate()} disabled={saveAbout.isPending}>

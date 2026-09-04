@@ -12,6 +12,8 @@ export type BusinessWorkspace = {
   website: string | null;
   industry: string | null;
   size: string | null;
+  location: string | null;
+  country_code: string | null;
   created_at: string;
   member_count: number;
   team_count: number;

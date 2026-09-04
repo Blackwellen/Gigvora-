@@ -3,6 +3,7 @@ import { AppError } from '../../common/errors/AppError.js';
 import { emitEvent } from '../../common/events/outbox.js';
 import { notify } from '../../modules/notifications/notify.js';
 import { recomputeReputationRollup } from './reputationRollup.service.js';
+import { getProfileOwner, getOrCreateOwnProfileId } from './profileHelpers.js';
 
 export async function listEndorsementsForSubject(subjectProfileId) {
   const rows = await db('endorsements')
@@ -26,18 +27,28 @@ export async function listEndorsementsForSubject(subjectProfileId) {
 
 export async function endorseSkill(endorserId, { subjectProfileId, skillId, relationshipContext }) {
   if (!subjectProfileId || !skillId) throw new AppError('subjectProfileId and skillId are required', 422);
-  if (subjectProfileId === endorserId) throw new AppError('You cannot endorse yourself', 422);
+  const subjectProfile = await getProfileOwner(subjectProfileId);
+  if (subjectProfile.user_id === endorserId) throw new AppError('You cannot endorse yourself', 422);
+  const endorserProfileId = await getOrCreateOwnProfileId(endorserId);
 
   const skill = await db('skills').where({ id: skillId }).first();
   if (!skill) throw new AppError('Unknown skill', 404);
 
-  // A relationship is only ever marked verified if backed by a real shared-employment/project
-  // record — never inferred purely from the endorser's say-so (§27).
-  const sharedEmployment = await db('employment_history')
-    .where({ profile_id: subjectProfileId })
-    .whereExists(
-      db('employment_history as eh2').whereRaw('eh2.profile_id = ? and eh2.company_name = employment_history.company_name', [endorserId])
-    )
+  // A relationship is only ever marked verified if backed by a real shared-employment record
+  // (the existing `experiences` table, which already tracks employer-verified history) —
+  // never inferred purely from the endorser's say-so (§27). Matched by shared company_id when
+  // both sides link a canonical company, falling back to org_name for unlinked employers.
+  const sharedEmployment = await db('experiences as e1')
+    .where('e1.profile_id', subjectProfileId)
+    .whereExists(function () {
+      this.select(1)
+        .from('experiences as e2')
+        .where('e2.profile_id', endorserProfileId)
+        .andWhere((qb) => {
+          qb.whereRaw('e2.company_id = e1.company_id and e1.company_id is not null')
+            .orWhereRaw('lower(e2.org_name) = lower(e1.org_name) and e1.org_name is not null');
+        });
+    })
     .first()
     .catch(() => null);
 
@@ -61,7 +72,7 @@ export async function endorseSkill(endorserId, { subjectProfileId, skillId, rela
     await emitEvent({ aggregateType: 'endorsement', aggregateId: endorsement.id, eventType: 'trust.endorsement.created', payload: { subjectProfileId, skillId } }, trx);
   });
 
-  await notify({ userId: subjectProfileId, actorId: endorserId, type: 'trust.endorsement.received', payload: { skillId } });
+  await notify({ userId: subjectProfile.user_id, actorId: endorserId, type: 'trust.endorsement.received', payload: { skillId } });
   return endorsement;
 }
 

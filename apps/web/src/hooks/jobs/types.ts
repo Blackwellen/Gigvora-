@@ -18,6 +18,7 @@ export type Job = {
   description: string;
   requirements: string[] | null;
   location: string | null;
+  country_code?: string | null;
   employment_type: JobEmploymentType;
   work_mode: JobWorkMode;
   salary_min: number | null;
@@ -52,6 +53,7 @@ export type JobInput = {
   description: string;
   requirements?: string[];
   location?: string;
+  country_code?: string;
   employment_type: JobEmploymentType;
   work_mode: JobWorkMode;
   salary_min?: number;

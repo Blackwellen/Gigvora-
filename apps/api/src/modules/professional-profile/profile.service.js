@@ -70,6 +70,12 @@ export async function updateAbout(userId, patch) {
   for (const field of ABOUT_FIELDS) {
     if (field in patch) update[field === 'bio' ? 'bio' : field] = patch[field];
   }
+  if ('countryCode' in patch) {
+    if (patch.countryCode !== null && patch.countryCode !== undefined && !isValidCountryCode(patch.countryCode)) {
+      throw new AppError(`"${patch.countryCode}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+    }
+    update.country_code = patch.countryCode ? patch.countryCode.toUpperCase() : null;
+  }
   if ('links' in patch && patch.links && typeof patch.links === 'object') {
     update.links = JSON.stringify(patch.links);
   }

@@ -17,6 +17,9 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { CategorySelect } from '@/components/ui/CategorySelect';
+import { CountrySelect } from '@/components/ui/CountrySelect';
+import { TagPicker } from '@/components/ui/TagPicker';
 import { WizardStepper, type WizardStep } from '@/components/wizard/WizardStepper';
 import { useCreateJob, useAddScreeningQuestion } from '@/hooks/jobs/useCreateJob';
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -88,6 +91,7 @@ type FormState = {
   skillsRequired: string[];
   skillsNiceToHave: string[];
   location: string;
+  countryCode: string;
   workMode: JobWorkMode;
   salaryMin: string;
   salaryMax: string;
@@ -111,6 +115,7 @@ const INITIAL: FormState = {
   skillsRequired: [],
   skillsNiceToHave: [],
   location: '',
+  countryCode: '',
   workMode: 'onsite',
   salaryMin: '',
   salaryMax: '',
@@ -233,6 +238,7 @@ export default function CreateJobPage() {
         description: composeDescription(),
         requirements: form.requirements.length ? form.requirements : undefined,
         location: form.location.trim(),
+        country_code: form.countryCode || undefined,
         employment_type: form.employmentType,
         work_mode: form.workMode,
         salary_min: form.salaryMin ? Number(form.salaryMin) : undefined,
@@ -303,7 +309,7 @@ export default function CreateJobPage() {
               <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Senior Product Designer" data-autofocus />
             </Field>
             <Field label="Category">
-              <Input value={form.category} onChange={(e) => set('category', e.target.value)} placeholder="e.g. Design, Engineering, Sales" />
+              <CategorySelect value={form.category || null} onChange={(v) => set('category', v || '')} allowEmpty={false} />
             </Field>
             <Field label="Seniority">
               <div className="grid grid-cols-3 gap-2">
@@ -369,18 +375,16 @@ export default function CreateJobPage() {
         {step === 2 && (
           <div className="space-y-3">
             <Field label="Required skills">
-              <TagInput
-                values={form.skillsRequired}
-                onAdd={(v) => set('skillsRequired', [...form.skillsRequired, v])}
-                onRemove={(i) => set('skillsRequired', form.skillsRequired.filter((_, idx) => idx !== i))}
+              <TagPicker
+                value={form.skillsRequired}
+                onChange={(v) => set('skillsRequired', v)}
                 placeholder="e.g. React, Figma, SQL"
               />
             </Field>
             <Field label="Nice-to-have skills">
-              <TagInput
-                values={form.skillsNiceToHave}
-                onAdd={(v) => set('skillsNiceToHave', [...form.skillsNiceToHave, v])}
-                onRemove={(i) => set('skillsNiceToHave', form.skillsNiceToHave.filter((_, idx) => idx !== i))}
+              <TagPicker
+                value={form.skillsNiceToHave}
+                onChange={(v) => set('skillsNiceToHave', v)}
                 placeholder="e.g. GraphQL, Motion design"
               />
             </Field>
@@ -402,6 +406,9 @@ export default function CreateJobPage() {
                 <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
                 <Input value={form.location} onChange={(e) => set('location', e.target.value)} placeholder="e.g. New York, NY" className="pl-9" />
               </div>
+            </Field>
+            <Field label="Country">
+              <CountrySelect value={form.countryCode || null} onChange={(v) => set('countryCode', v || '')} emptyLabel="Select a country" />
             </Field>
             <Field label="Work mode">
               <div className="grid grid-cols-3 gap-2">
@@ -570,6 +577,7 @@ export default function CreateJobPage() {
             <ReviewRow label="Seniority" value={SENIORITIES.find((s) => s.value === form.seniority)?.label || '—'} />
             <ReviewRow label="Employment type" value={EMPLOYMENT_TYPES.find((t) => t.value === form.employmentType)?.label || '—'} />
             <ReviewRow label="Location" value={form.location || '—'} />
+            <ReviewRow label="Country" value={form.countryCode || '—'} />
             <ReviewRow label="Work mode" value={WORK_MODES.find((m) => m.value === form.workMode)?.label || '—'} />
             <ReviewRow
               label="Salary"

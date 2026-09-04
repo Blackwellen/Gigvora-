@@ -82,6 +82,13 @@ import {
   Crown,
   CreditCard,
   Layers,
+  Home,
+  UserSearch,
+  FileCheck2,
+  Trello,
+  Workflow,
+  Plug,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -138,6 +145,15 @@ export const ICONS: Record<string, LucideIcon> = {
   crown: Crown,
   'credit-card': CreditCard,
   layers: Layers,
+  home: Home,
+  'user-search': UserSearch,
+  'list-checks': ListChecks,
+  'file-check': FileCheck2,
+  inbox: Inbox,
+  trello: Trello,
+  workflow: Workflow,
+  plug: Plug,
+  'alert-triangle': AlertTriangle,
 };
 
 export function NavIcon({ name, className }: { name?: string | null; className?: string }) {

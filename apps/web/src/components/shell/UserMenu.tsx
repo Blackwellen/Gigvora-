@@ -227,7 +227,8 @@ function UserMenuBody({ fullName, email, logout }: { fullName: string; email: st
         <div className="border-t border-ink-100 py-2 dark:border-ink-800">
           <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-ink-400 dark:text-ink-500">Workspace</p>
           <div className="space-y-0.5">
-            <MenuLink href="/app/talent" icon={Users} label="Talent" onClick={close} />
+            <MenuLink href="/app/business-home" icon={Building2} label="Business Workspace" onClick={close} />
+            <MenuLink href="/app/talent-discovery" icon={Users} label="Talent" onClick={close} />
             <MenuLink href="/app/clients" icon={Briefcase} label="Clients" onClick={close} />
             <MenuLink href="/app/finance" icon={DollarSign} label="Finance" onClick={close} />
             {/* Distinct label from "Admin dashboard" above (both route to
