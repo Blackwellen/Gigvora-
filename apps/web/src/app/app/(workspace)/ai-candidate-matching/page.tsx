@@ -102,7 +102,7 @@ function AiCandidateMatchingInner() {
   const { data: matches, isLoading, isError, error } = useAiCandidateMatching({ jobId, projectId });
 
   return (
-    <div className="mx-auto max-w-[1320px] space-y-5 px-4 py-5 lg:px-6">
+    <div className="mx-auto space-y-5 px-4 py-5 lg:px-6">
       <div>
         <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900 dark:text-white">
           <Bot className="h-5 w-5 text-purple-600" /> AI Candidate Matching

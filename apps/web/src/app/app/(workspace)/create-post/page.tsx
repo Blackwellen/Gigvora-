@@ -132,7 +132,7 @@ export default function CreatePostPage() {
   const saving = createPost.isPending || updatePost.isPending;
 
   return (
-    <div className="mx-auto max-w-[1320px] px-4 py-5 lg:px-6">
+    <div className="mx-auto px-4 py-5 lg:px-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-bold tracking-[-0.01em] text-ink-900 dark:text-white">Create Post</h1>

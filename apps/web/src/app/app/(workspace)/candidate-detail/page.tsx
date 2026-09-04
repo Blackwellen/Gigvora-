@@ -95,7 +95,7 @@ function CandidateDetailInner() {
   }
 
   return (
-    <div className="mx-auto max-w-[1320px] space-y-5 px-4 py-5 lg:px-6">
+    <div className="mx-auto space-y-5 px-4 py-5 lg:px-6">
       <Card className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4">
