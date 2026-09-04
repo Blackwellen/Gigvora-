@@ -21,6 +21,7 @@ import {
   DollarSign,
   Briefcase,
   LayoutGrid,
+  Contact2,
 } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent, usePopoverClose } from '@/components/ui/Popover';
 import { Avatar } from '@/components/ui/Avatar';
@@ -29,6 +30,11 @@ import { useSession } from '@/lib/session/SessionContext';
 import { useWorkspace } from '@/lib/workspace/WorkspaceContext';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { useEntitlements } from '@/hooks/useEntitlements';
+
+// Mirrors requirePlatformRole('super_admin','admin','moderator') in apps/api — only these
+// roles can actually open the internal Domain 28 Safety Cases queue, so the entry point
+// should only render for them.
+const PLATFORM_STAFF_ROLES = new Set(['super_admin', 'admin', 'moderator']);
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free',
@@ -138,12 +144,22 @@ function UserMenuBody({ fullName, email, logout }: { fullName: string; email: st
       </div>
 
       <div className="space-y-0.5 py-2">
-        <MenuLink href={`/profile/${user?.id}`} icon={User} label="View profile" onClick={close} />
+        <MenuLink href="/app/professional-profile" icon={User} label="View profile" onClick={close} />
         <MenuLink href="/app/projects-home" icon={LayoutGrid} label="My Projects" onClick={close} />
+        {/* Domain 24 — shared relationship system, available at both the
+            Professional and Business tier (resolveOwner on the API side
+            auto-scopes to whichever workspace context is active), so this
+            lives in the always-visible section rather than the org-gated
+            "Workspace" block below. */}
+        <MenuLink href="/app/crm-home" icon={Contact2} label="CRM" onClick={close} />
         <MenuLink href="/app/saved-items" icon={Bookmark} label="Saved items" onClick={close} />
         {/* Folded in from the "More" mega menu's Tools section. */}
         <MenuLink href="/app/recent-activity" icon={History} label="Recent Activity" onClick={close} />
         <MenuLink href="/app/notifications-tray" icon={Bell} label="Notification preferences" onClick={close} />
+        {/* Domain 28 — Trust Centre is the flagship trust/reputation/verification/safety
+            overview, always visible (not plan-gated: basic safety and verification status
+            must never be an upsell). */}
+        <MenuLink href="/app/trust-centre" icon={ShieldCheck} label="Trust Centre" onClick={close} />
         <MenuLink href="/settings/security" icon={Shield} label="Security" onClick={close} />
         <MenuLink href="/settings" icon={Settings} label="Settings" onClick={close} />
         {/* Folded in from the "More" mega menu's Account section. */}
@@ -179,6 +195,13 @@ function UserMenuBody({ fullName, email, logout }: { fullName: string; email: st
           // /app/admin is the closest real destination (workspace admin
           // tools) until a platform admin surface ships.
           <MenuLink href="/app/admin" icon={ShieldCheck} label="Admin dashboard" onClick={close} />
+        )}
+
+        {PLATFORM_STAFF_ROLES.has(user?.role || '') && (
+          // Domain 28 internal Trust & Safety operator surfaces — gated the same way the
+          // corresponding API routes are (requirePlatformRole('super_admin','admin',
+          // 'moderator')), so this entry only ever appears for staff who can actually open it.
+          <MenuLink href="/app/safety-cases" icon={Shield} label="Safety Cases" onClick={close} />
         )}
 
         {switchableOrg && (
