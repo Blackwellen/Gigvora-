@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { BarChart3, MessageCircle, TrendingUp, Users } from 'lucide-react';
 import { requestChatBubbleOpen } from '@/components/chat-bubble/FloatingChatBubble';
+import { PageContainer } from '@/components/ui/PageContainer';
 
 /**
  * Demo route for reference 10.02 ("Chat Bubble"): a normal dashboard-style page with the
@@ -37,7 +38,7 @@ function ChatBubbleDemoPageInner() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <PageContainer className="py-6 sm:py-8">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold tracking-[-0.01em] text-ink-900 dark:text-white">Dashboard</h1>
         <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">
@@ -76,6 +77,6 @@ function ChatBubbleDemoPageInner() {
         </Link>
         .
       </div>
-    </div>
+    </PageContainer>
   );
 }

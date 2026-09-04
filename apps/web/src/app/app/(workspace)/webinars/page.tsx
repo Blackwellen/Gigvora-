@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Calendar, Radio } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { AlertTriangle, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { PageContainer } from '@/components/ui/PageContainer';
 import { api } from '@/lib/api';
+import { WebinarCard, type NormalizedWebinar } from './WebinarCard';
 
 type WebinarRecord = {
   id: string;
@@ -23,7 +24,7 @@ type WebinarRecord = {
 
 const PAGE_SIZE = 20;
 
-function normalize(webinar: WebinarRecord) {
+function normalize(webinar: WebinarRecord): NormalizedWebinar {
   return {
     id: webinar.id,
     title: webinar.title,
@@ -45,7 +46,7 @@ export default function WebinarsPage() {
   const webinars = (data || []).map(normalize);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 lg:px-0">
+    <PageContainer className="py-6">
       <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900 dark:text-white">
         <Radio className="h-5 w-5" /> Webinars
       </h1>
@@ -77,49 +78,9 @@ export default function WebinarsPage() {
       )}
 
       {!isLoading && !isError && webinars.length > 0 && (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {webinars.map((webinar) => (
-            <Card key={webinar.id} className="flex flex-col overflow-hidden">
-              {webinar.coverImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={webinar.coverImageUrl} alt="" className="h-36 w-full object-cover" />
-              ) : (
-                <div className="flex h-36 w-full items-center justify-center bg-ink-900">
-                  <Radio className="h-8 w-8 text-white/70" />
-                </div>
-              )}
-              <div className="flex flex-1 flex-col p-4">
-                <h3 className="text-sm font-bold text-ink-900 dark:text-white">{webinar.title}</h3>
-                {webinar.host && <p className="mt-0.5 text-xs text-ink-500 dark:text-ink-400">{webinar.host}</p>}
-                {webinar.description && (
-                  <p className="mt-2 line-clamp-3 text-sm text-ink-500 dark:text-ink-400">{webinar.description}</p>
-                )}
-                {webinar.scheduledAt && (
-                  <p className="mt-3 flex items-center gap-1 text-xs text-ink-400 dark:text-ink-500">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(webinar.scheduledAt).toLocaleString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                )}
-                {webinar.registrationUrl && (
-                  <a
-                    href={webinar.registrationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3"
-                  >
-                    <Button type="button" variant="primary" size="sm" className="w-full">
-                      Register
-                    </Button>
-                  </a>
-                )}
-              </div>
-            </Card>
+            <WebinarCard key={webinar.id} webinar={webinar} />
           ))}
         </div>
       )}
@@ -134,6 +95,6 @@ export default function WebinarsPage() {
           </Button>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
