@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FeedPostCard } from '../../src/components/FeedPostCard';
-import { Avatar } from '../../src/components/Avatar';
-import { useCreatePost, useFeed } from '../../src/lib/useFeed';
-import { useSession } from '../../src/lib/SessionContext';
-import { colors, radius, spacing } from '../../src/lib/theme';
+import { FeedPostCard } from '../../../src/components/FeedPostCard';
+import { Avatar } from '../../../src/components/Avatar';
+import { useCreatePost, useFeed } from '../../../src/lib/useFeed';
+import { useSession } from '../../../src/lib/SessionContext';
+import { colors, radius, spacing } from '../../../src/lib/theme';
 
 export default function LiveFeedScreen() {
   const { user } = useSession();

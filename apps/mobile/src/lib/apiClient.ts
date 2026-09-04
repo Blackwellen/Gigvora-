@@ -1,7 +1,11 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-export const API_URL = `${process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000'}/api/v1`;
+// Defaults to the live production API so an unconfigured build (e.g. a
+// release binary with no .env baked in) still works; local dev overrides
+// this via EXPO_PUBLIC_API_URL in .env (see .env.example).
+export const API_URL = `${process.env.EXPO_PUBLIC_API_URL ?? 'https://www.gigvora.com'}/api/v1`;
+export const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.gigvora.com';
 
 const ACCESS_TOKEN_KEY = 'gigvora-access-token';
 const REFRESH_TOKEN_KEY = 'gigvora-refresh-token';

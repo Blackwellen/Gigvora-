@@ -2,9 +2,9 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { router } from 'expo-router';
-import { Avatar } from '../../../src/components/Avatar';
-import { useConversations } from '../../../src/lib/useInbox';
-import { colors, radius, spacing } from '../../../src/lib/theme';
+import { Avatar } from '../../../../src/components/Avatar';
+import { useConversations } from '../../../../src/lib/useInbox';
+import { colors, radius, spacing } from '../../../../src/lib/theme';
 
 export default function InboxScreen() {
   const { data, isLoading } = useConversations();
@@ -22,7 +22,7 @@ export default function InboxScreen() {
           keyExtractor={(item) => item.id}
           ListEmptyComponent={<Text style={styles.empty}>No conversations yet.</Text>}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.row} onPress={() => router.push({ pathname: '/(app)/chat/[id]', params: { id: item.id, title: item.title } })}>
+            <TouchableOpacity style={styles.row} onPress={() => router.push({ pathname: '/(app)/(tabs)/chat/[id]', params: { id: item.id, title: item.title } })}>
               <Avatar name={item.title} size={44} />
               <View style={styles.rowText}>
                 <View style={styles.rowTop}>

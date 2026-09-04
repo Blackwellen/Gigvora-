@@ -2,8 +2,8 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { router } from 'expo-router';
-import { useMarkNotificationRead, useNotifications, type NotificationData } from '../../src/lib/useNotifications';
-import { colors, radius, spacing } from '../../src/lib/theme';
+import { useMarkNotificationRead, useNotifications, type NotificationData } from '../../../src/lib/useNotifications';
+import { colors, radius, spacing } from '../../../src/lib/theme';
 
 const TYPE_LABEL: Record<string, (p: Record<string, unknown>) => string> = {
   'post.reaction': (p) => `${p.actorName} reacted to your post`,
@@ -22,7 +22,7 @@ export default function NotificationsScreen() {
     // (mobile has no comparable route yet) — surface it as an in-app toast
     // seam via console for now rather than crashing on an unknown route.
     const postId = (n.payload as { postId?: string }).postId;
-    if (postId) router.push('/(app)/live-feed');
+    if (postId) router.push('/(app)/(tabs)/live-feed');
   }
 
   return (

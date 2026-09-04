@@ -1,8 +1,8 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Avatar } from '../../src/components/Avatar';
-import { useSession } from '../../src/lib/SessionContext';
-import { colors, radius, spacing } from '../../src/lib/theme';
+import { Avatar } from '../../../src/components/Avatar';
+import { useSession } from '../../../src/lib/SessionContext';
+import { colors, radius, spacing } from '../../../src/lib/theme';
 
 export default function ProfileScreen() {
   const { user, logout } = useSession();

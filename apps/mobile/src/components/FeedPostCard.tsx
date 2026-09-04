@@ -1,19 +1,22 @@
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Avatar } from './Avatar';
 import { colors, radius, spacing } from '../lib/theme';
-import { useComments, useCreateComment, useReactToPost, useRemoveReaction, type FeedPostData } from '../lib/useFeed';
+import { useComments, useCreateComment, useReactToPost, useRemoveReaction, useSharePost, type FeedPostData } from '../lib/useFeed';
 
 export function FeedPostCard({ post }: { post: FeedPostData }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const react = useReactToPost();
   const unreact = useRemoveReaction();
+  const share = useSharePost();
 
   function toggleLike() {
     if (post.myReaction) unreact.mutate({ postId: post.id });
     else react.mutate({ postId: post.id, reactionType: 'like' });
   }
+
+  const images = post.attachments?.filter((a) => a.type === 'image') ?? [];
 
   return (
     <View style={styles.card}>
@@ -30,9 +33,24 @@ export function FeedPostCard({ post }: { post: FeedPostData }) {
 
       {post.body ? <Text style={styles.body}>{post.body}</Text> : null}
 
+      {images.length > 0 && (
+        <View style={styles.mediaRow}>
+          {images.slice(0, 4).map((img, i) => (
+            <Image key={img.id ?? `${img.url}-${i}`} source={{ uri: img.url }} style={styles.mediaImage} resizeMode="cover" />
+          ))}
+        </View>
+      )}
+
       <View style={styles.statsRow}>
         <Text style={styles.statsText}>{post.likeCount > 0 ? `${post.likeCount} reaction${post.likeCount === 1 ? '' : 's'}` : ''}</Text>
-        <Text style={styles.statsText}>{post.commentCount > 0 ? `${post.commentCount} comment${post.commentCount === 1 ? '' : 's'}` : ''}</Text>
+        <Text style={styles.statsText}>
+          {[
+            post.commentCount > 0 ? `${post.commentCount} comment${post.commentCount === 1 ? '' : 's'}` : '',
+            post.shareCount > 0 ? `${post.shareCount} share${post.shareCount === 1 ? '' : 's'}` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
       </View>
 
       <View style={styles.actions}>
@@ -41,6 +59,9 @@ export function FeedPostCard({ post }: { post: FeedPostData }) {
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => setCommentsOpen((v) => !v)}>
           <Text style={styles.actionText}>💬 Comment</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} disabled={share.isPending} onPress={() => share.mutate({ postId: post.id })}>
+          <Text style={styles.actionText}>{'\u{1F501}'} Share</Text>
         </TouchableOpacity>
       </View>
 
@@ -95,6 +116,8 @@ const styles = StyleSheet.create({
   authorName: { fontWeight: '700', color: colors.ink900, fontSize: 14 },
   meta: { color: colors.ink400, fontSize: 12, marginTop: 1 },
   body: { color: colors.ink800, fontSize: 15, marginTop: spacing.sm, lineHeight: 21 },
+  mediaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm },
+  mediaImage: { width: '48%', aspectRatio: 1.3, borderRadius: radius.md, backgroundColor: colors.ink100 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md },
   statsText: { color: colors.ink400, fontSize: 12 },
   actions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.ink100, marginTop: spacing.sm, paddingTop: spacing.xs },
