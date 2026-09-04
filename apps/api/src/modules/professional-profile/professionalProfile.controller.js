@@ -2,6 +2,7 @@ import { asyncHandler } from '../../common/utils/asyncHandler.js';
 import { AppError } from '../../common/errors/AppError.js';
 import * as profileService from './profile.service.js';
 import * as experiences from './experiences.service.js';
+import * as companySuggestions from './companySuggestions.service.js';
 import * as skills from './skills.service.js';
 import * as education from './education.service.js';
 import * as certifications from './certifications.service.js';
@@ -45,6 +46,8 @@ export const recordViewHandler = asyncHandler(async (req, res) => {
 // --- Experience -----------------------------------------------------------
 export const listExperiencesHandler = h((req) => experiences.list(req.user.sub));
 export const createExperienceHandler = h((req) => experiences.create(req.user.sub, req.body));
+export const searchCompaniesHandler = h((req) => companySuggestions.searchCompanies(req.query.q, req.query.limit ? Number(req.query.limit) : undefined));
+export const resolveSkillHandler = h((req) => skills.resolveSkill(req.body.name));
 export const updateExperienceHandler = h((req) => experiences.update(req.user.sub, req.params.id, req.body));
 export const reorderExperiencesHandler = h((req) => experiences.reorder(req.user.sub, req.body.orderedIds));
 export const deleteExperienceHandler = asyncHandler(async (req, res) => {

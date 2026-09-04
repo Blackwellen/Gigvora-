@@ -19,6 +19,7 @@ router.post('/views', c.recordViewHandler);
 
 // Experience
 router.get('/me/experiences', c.listExperiencesHandler);
+router.get('/companies/search', c.searchCompaniesHandler);
 router.post('/me/experiences', c.createExperienceHandler);
 router.patch('/me/experiences/:id', c.updateExperienceHandler);
 router.post('/me/experiences/reorder', c.reorderExperiencesHandler);
@@ -27,6 +28,7 @@ router.delete('/me/experiences/:id', c.deleteExperienceHandler);
 // Skills
 router.get('/me/skills', c.listSkillsHandler);
 router.get('/skills/search', c.searchSkillsHandler);
+router.post('/skills/resolve', c.resolveSkillHandler);
 router.get('/me/skills/suggestions', c.suggestSkillsHandler);
 router.post('/me/skills', c.addSkillHandler);
 router.patch('/me/skills/:id', c.updateSkillHandler);

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Award, ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { ProfessionalProfileShell } from '@/components/profile/ProfessionalProfileShell';
 import { ProfileEmptyState } from '@/components/profile/ProfileEmptyState';
+import { SkillIdTagPicker, type SkillTag } from '@/components/profile/SkillIdTagPicker';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -21,6 +22,7 @@ type Certification = {
   expiry_date: string | null;
   visibility: string;
   verification_status: string;
+  skills?: SkillTag[];
 };
 
 const KEY = ['professional-profile', 'certifications'];
@@ -74,6 +76,15 @@ export default function CertificationsPage() {
                       {cert.expiry_date && ` · Expires ${new Date(cert.expiry_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`}
                     </p>
                   )}
+                  {cert.skills && cert.skills.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {cert.skills.map((s) => (
+                        <span key={s.id} className="rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-700 dark:bg-ink-800 dark:text-ink-200">
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-2 flex items-center gap-2">
                     <Badge tone={cert.verification_status === 'verified' ? 'success' : 'neutral'}>{cert.verification_status === 'verified' ? 'Verified' : 'Unverified'}</Badge>
                     {cert.credential_url && (
@@ -103,10 +114,20 @@ function CertificationForm({ onClose }: { onClose: () => void }) {
   const [credentialUrl, setCredentialUrl] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [skills, setSkills] = useState<SkillTag[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => api.post('/professional-profile/me/certifications', { name, issuerName, credentialId, credentialUrl, issueDate, expiryDate }),
+    mutationFn: () =>
+      api.post('/professional-profile/me/certifications', {
+        name,
+        issuerName,
+        credentialId,
+        credentialUrl,
+        issueDate,
+        expiryDate,
+        skillIds: skills.map((s) => s.id),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: KEY });
       onClose();
@@ -123,6 +144,10 @@ function CertificationForm({ onClose }: { onClose: () => void }) {
         <Input placeholder="Credential URL (optional)" value={credentialUrl} onChange={(e) => setCredentialUrl(e.target.value)} />
         <Input type="date" placeholder="Issue date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
         <Input type="date" placeholder="Expiry date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+      </div>
+      <div className="mt-3">
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">Related skills (up to 5)</p>
+        <SkillIdTagPicker value={skills} onChange={setSkills} max={5} placeholder="Add a skill..." />
       </div>
       {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
       <div className="mt-4 flex items-center gap-2">

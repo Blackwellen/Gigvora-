@@ -114,7 +114,7 @@ export function ProfessionalProfileHero({ hero }: { hero: ProfileHero }) {
                   </Badge>
                 )}
               </div>
-              {hero.headline && <p className="mt-0.5 text-sm font-medium text-ink-600 dark:text-ink-300">{hero.headline}</p>}
+              {hero.headline && <p className="mt-0.5 text-base font-medium text-ink-700 dark:text-ink-200">{hero.headline}</p>}
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-400 dark:text-ink-500">
                 {hero.location && <span>{hero.location}</span>}
                 {hero.timezone && <span>Local time zone: {hero.timezone}</span>}

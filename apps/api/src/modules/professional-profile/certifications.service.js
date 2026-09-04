@@ -16,7 +16,11 @@ async function withAssetUrl(row) {
 export async function list(userId) {
   const profileId = await getOwnProfileId(userId);
   const rows = await db('certifications').where({ profile_id: profileId }).orderBy('issue_date', 'desc');
-  return Promise.all(rows.map(withAssetUrl));
+  const allSkillIds = [...new Set(rows.flatMap((r) => r.skill_ids || []))];
+  const skillRows = allSkillIds.length ? await db('skills').whereIn('id', allSkillIds).select('id', 'canonical_name') : [];
+  const skillById = Object.fromEntries(skillRows.map((s) => [s.id, s.canonical_name]));
+  const withSkills = rows.map((r) => ({ ...r, skills: (r.skill_ids || []).filter((id) => skillById[id]).map((id) => ({ id, name: skillById[id] })) }));
+  return Promise.all(withSkills.map(withAssetUrl));
 }
 
 export async function create(userId, input) {
@@ -33,6 +37,7 @@ export async function create(userId, input) {
       issue_date: input.issueDate || null,
       expiry_date: input.expiryDate || null,
       asset_key: input.assetKey || null,
+      skill_ids: JSON.stringify(input.skillIds || []),
       visibility: input.visibility || 'public',
     })
     .returning('*');
@@ -60,6 +65,7 @@ export async function update(userId, id, input) {
   ]) {
     if (key in input) patch[col] = input[key];
   }
+  if ('skillIds' in input) patch.skill_ids = JSON.stringify(input.skillIds);
 
   const [row] = await db('certifications').where({ id }).update(patch).returning('*');
   await emitEvent({ aggregateType: 'certification', aggregateId: id, eventType: 'certification.updated', payload: { fields: Object.keys(patch) } });

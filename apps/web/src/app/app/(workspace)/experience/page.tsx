@@ -2,26 +2,31 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Briefcase, Loader2, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Briefcase, Loader2, MapPin, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { ProfessionalProfileShell } from '@/components/profile/ProfessionalProfileShell';
 import { ProfileEmptyState } from '@/components/profile/ProfileEmptyState';
+import { CompanySelect } from '@/components/profile/CompanySelect';
+import { SkillIdTagPicker, type SkillTag } from '@/components/profile/SkillIdTagPicker';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api, getApiErrorMessage } from '@/lib/api';
+import { useJobTitles } from '@/hooks/useTaxonomies';
 
 type Experience = {
   id: string;
   title: string;
   org_name: string | null;
-  company: { id: string; name: string; logo_url: string | null } | null;
+  company: { id: string; name: string; logo_url: string | null; location: string | null; employee_count: number | null } | null;
   employment_type: string | null;
   location: string | null;
   start_date: string;
   end_date: string | null;
   is_current: boolean;
   description: string | null;
+  skill_ids: string[];
+  skills?: SkillTag[];
   verification_status: string;
 };
 
@@ -35,18 +40,31 @@ function formatRange(exp: Experience) {
 
 function ExperienceForm({ onClose, initial }: { onClose: () => void; initial?: Experience }) {
   const queryClient = useQueryClient();
+  const { data: jobTitles } = useJobTitles();
   const [title, setTitle] = useState(initial?.title || '');
   const [orgName, setOrgName] = useState(initial?.org_name || initial?.company?.name || '');
+  const [companyId, setCompanyId] = useState<string | null>(initial?.company?.id || null);
   const [location, setLocation] = useState(initial?.location || '');
   const [startDate, setStartDate] = useState(initial?.start_date?.slice(0, 10) || '');
   const [endDate, setEndDate] = useState(initial?.end_date?.slice(0, 10) || '');
   const [isCurrent, setIsCurrent] = useState(initial?.is_current ?? false);
   const [description, setDescription] = useState(initial?.description || '');
+  const [skills, setSkills] = useState<SkillTag[]>(initial?.skills || []);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const payload = { title, orgName, location, startDate, endDate: isCurrent ? null : endDate, isCurrent, description };
+      const payload = {
+        title,
+        orgName,
+        companyId,
+        location,
+        startDate,
+        endDate: isCurrent ? null : endDate,
+        isCurrent,
+        description,
+        skillIds: skills.map((s) => s.id),
+      };
       if (initial) return api.patch(`/professional-profile/me/experiences/${initial.id}`, payload);
       return api.post('/professional-profile/me/experiences', payload);
     },
@@ -61,8 +79,19 @@ function ExperienceForm({ onClose, initial }: { onClose: () => void; initial?: E
   return (
     <Card className="p-5">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input placeholder="Job title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Input placeholder="Company" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+        <div>
+          <Input list="job-title-options" placeholder="Job title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <datalist id="job-title-options">
+            {(jobTitles?.flat || []).map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
+        </div>
+        <CompanySelect
+          value={orgName}
+          onChange={setOrgName}
+          onSelectCompany={(c) => setCompanyId(c?.id || null)}
+        />
         <Input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
         <div className="flex items-center gap-2">
           <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -79,6 +108,10 @@ function ExperienceForm({ onClose, initial }: { onClose: () => void; initial?: E
         rows={3}
         className="mt-3 w-full rounded-control border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-ink-700 dark:bg-ink-900 dark:text-white"
       />
+      <div className="mt-3">
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">Skills used in this role (up to 5)</p>
+        <SkillIdTagPicker value={skills} onChange={setSkills} max={5} placeholder="Add a skill..." />
+      </div>
       {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
       <div className="mt-4 flex items-center gap-2">
         <Button type="button" size="sm" onClick={() => mutation.mutate()} disabled={mutation.isPending || !title || !startDate}>
@@ -157,7 +190,27 @@ export default function ExperiencePage() {
                       {formatRange(exp)}
                       {exp.location && ` · ${exp.location}`}
                     </p>
+                    {exp.company && (exp.company.location || exp.company.employee_count) && (
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-400 dark:text-ink-500">
+                        {exp.company.employee_count && (
+                          <span className="flex items-center gap-0.5">
+                            <Users className="h-3 w-3" /> {exp.company.employee_count.toLocaleString()} employees
+                          </span>
+                        )}
+                        {exp.company.location && exp.company.employee_count && <span>·</span>}
+                        {exp.company.location && <span>{exp.company.location}</span>}
+                      </p>
+                    )}
                     {exp.description && <p className="mt-2 text-sm text-ink-600 dark:text-ink-300">{exp.description}</p>}
+                    {exp.skills && exp.skills.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {exp.skills.map((s) => (
+                          <span key={s.id} className="rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-700 dark:bg-ink-800 dark:text-ink-200">
+                            {s.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="mt-2 flex items-center gap-2">
                       {exp.is_current && <Badge tone="success">Current</Badge>}
                       {exp.verification_status === 'employer_verified' ? (

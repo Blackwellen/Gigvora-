@@ -10,6 +10,7 @@ import { Router } from 'express';
 import { requireAuth } from '../../common/middleware/auth.js';
 import { COUNTRIES } from '../../common/taxonomies/countries.js';
 import { PROJECT_CATEGORY_GROUPS, PROJECT_CATEGORIES } from '../../common/taxonomies/projectCategories.js';
+import { JOB_TITLE_GROUPS, JOB_TITLES } from '../../common/taxonomies/jobTitles.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -22,6 +23,11 @@ router.get('/countries', (req, res) => {
 router.get('/project-categories', (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');
   res.json({ data: { groups: PROJECT_CATEGORY_GROUPS, flat: PROJECT_CATEGORIES } });
+});
+
+router.get('/job-titles', (req, res) => {
+  res.set('Cache-Control', 'private, max-age=86400');
+  res.json({ data: { groups: JOB_TITLE_GROUPS, flat: JOB_TITLES } });
 });
 
 export default router;
