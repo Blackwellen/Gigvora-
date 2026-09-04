@@ -7,7 +7,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: gigvora
-      POSTGRES_PASSWORD: gigvora
+      # Overridable via a top-level .env next to this compose file (or the
+      # cwd it's invoked from) — see apps/api/.env's DB_PASSWORD, which must
+      # match. Defaults to the old dev password only if that's not set.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gigvora}
       POSTGRES_DB: gigvora
     ports:
       - "127.0.0.1:5432:5432"
@@ -80,7 +83,15 @@ services:
     ports:
       - "127.0.0.1:4000:4000"
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      # NOTE: the "host-gateway" magic value resolves to the default `bridge`
+      # network's gateway (172.17.0.1), NOT this compose project's own
+      # `gigvora_default` network gateway that containers actually sit on —
+      # confirmed by `docker network inspect gigvora_default` showing
+      # 172.18.0.1. Hardcoded here instead so the api container can actually
+      # reach clamd's TCP listener on the host. If this compose project's
+      # network is ever torn down and recreated with a different subnet,
+      # re-check `docker network inspect gigvora_default` and update this.
+      - "host.docker.internal:172.18.0.1"
     depends_on:
       postgres:
         condition: service_healthy
