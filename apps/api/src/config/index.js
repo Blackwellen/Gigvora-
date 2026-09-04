@@ -14,6 +14,16 @@ export const config = {
   appUrl: process.env.APP_URL || 'http://localhost:4000',
   webUrl: process.env.WEB_URL || 'http://localhost:3000',
 
+  giphy: {
+    // Falls back to Giphy's own publicly documented beta testing key
+    // (https://developers.giphy.com/docs/api/#quick-start-guide — "For
+    // testing purposes, use dc6zaTOxFJmzC") so GIF search works out of the
+    // box without any setup; set GIPHY_API_KEY to a real registered key
+    // before relying on this in production (the beta key is rate-limited
+    // and can be revoked/rotated by Giphy at any time).
+    apiKey: process.env.GIPHY_API_KEY || 'dc6zaTOxFJmzC',
+  },
+
   db: {
     connectionString: process.env.DATABASE_URL,
     host: process.env.DB_HOST || 'localhost',

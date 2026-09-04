@@ -256,15 +256,20 @@ export function useClosePoll() {
   });
 }
 
+export type CommentAttachment = { type: 'gif' | 'image' | 'audio'; url: string; width?: number | null; height?: number | null; durationSeconds?: number | null; provider?: string | null; providerId?: string | null };
+
 export type CommentData = {
   id: string;
   postId: string;
   parentCommentId: string | null;
   author: { id: string; name: string; headline: string | null } | null;
   body: string;
+  attachments: CommentAttachment[];
   createdAt: string;
   editedAt: string | null;
   replyCount: number;
+  reactionCount: number;
+  viewerReaction: string | null;
   status?: 'published' | 'under_review' | 'removed';
   pendingReview?: boolean;
 };
@@ -280,12 +285,58 @@ export function useComments(postId: string, parentCommentId: string | null = nul
 export function useCreateComment(postId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { body: string; parentCommentId?: string | null }) =>
+    mutationFn: async (payload: { body: string; parentCommentId?: string | null; attachments?: CommentAttachment[] }) =>
       (await api.post(`/feed/posts/${postId}/comments`, payload)).data.data as CommentData,
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['comments', postId, variables.parentCommentId ?? null] });
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
+  });
+}
+
+export function useReactToComment(postId: string, parentCommentId: string | null = null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ commentId, reactionType }: { commentId: string; reactionType: string }) =>
+      (await api.post(`/feed/comments/${commentId}/reactions`, { reactionType })).data.data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['comments', postId, parentCommentId] }),
+  });
+}
+
+export function useRemoveCommentReaction(postId: string, parentCommentId: string | null = null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ commentId }: { commentId: string }) => (await api.delete(`/feed/comments/${commentId}/reactions`)).data.data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['comments', postId, parentCommentId] }),
+  });
+}
+
+export function useShareComment() {
+  return useMutation({
+    mutationFn: async ({ commentId, comment }: { commentId: string; comment?: string }) =>
+      (await api.post(`/feed/comments/${commentId}/share`, { comment })).data.data,
+  });
+}
+
+export function useUploadCommentAttachment() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      const { data } = await api.post('/feed/attachments', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      return data.data as { type: string; url: string; fileName: string; fileSize: number };
+    },
+  });
+}
+
+export type GifResult = { id: string; title: string; url: string; previewUrl: string; width: number | null; height: number | null; provider: string };
+
+export function useGifSearch(query: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['gif-search', query],
+    queryFn: async () => (await api.get<{ data: GifResult[] }>('/feed/gifs/search', { params: { q: query } })).data.data,
+    enabled,
+    staleTime: 60_000,
   });
 }
 

@@ -10,6 +10,7 @@ import { logMlInference } from '../../common/ml/mlInferenceLog.js';
 import * as service from './posts.service.js';
 import * as recommendationsService from './recommendations.service.js';
 import * as analyticsService from './postAnalytics.service.js';
+import * as gifsService from './gifs.service.js';
 
 export const feedRecommendationsHandler = asyncHandler(async (req, res) => {
   const [people, gigs, projects, podcasts, webinars] = await Promise.all([
@@ -108,6 +109,26 @@ export const sharePostHandler = asyncHandler(async (req, res) => {
   res.status(201).json({ data });
 });
 
+export const reactToCommentHandler = asyncHandler(async (req, res) => {
+  const data = await service.reactToComment(req.user.sub, req.params.commentId, req.body.reactionType);
+  res.json({ data });
+});
+
+export const unreactToCommentHandler = asyncHandler(async (req, res) => {
+  const data = await service.removeCommentReaction(req.user.sub, req.params.commentId);
+  res.json({ data });
+});
+
+export const shareCommentHandler = asyncHandler(async (req, res) => {
+  const data = await service.shareComment(req.user.sub, req.params.commentId, req.body);
+  res.status(201).json({ data });
+});
+
+export const searchGifsHandler = asyncHandler(async (req, res) => {
+  const data = await gifsService.searchGifs(req.query.q);
+  res.json({ data });
+});
+
 export const savePostHandler = asyncHandler(async (req, res) => {
   await service.savePost(req.user.sub, req.params.id);
   res.status(204).send();
@@ -143,19 +164,32 @@ const ALLOWED_MIME = new Set([
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  // Voice notes (comment composer's MediaRecorder capture) — webm/opus is
+  // what every evergreen Chromium/Firefox browser records by default; mp3/
+  // wav/ogg covered too since MediaRecorder support varies by browser/OS.
+  'audio/webm',
+  'audio/ogg',
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/wav',
 ]);
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 function attachmentTypeFor(mime) {
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'audio';
   return 'document';
 }
 
 // GIF/DOC (legacy binary) magic-byte signatures aren't always resolved by
 // file-type for every sample; when file-type can't identify a signature at
 // all for a type we still expect to detect (i.e. not doc/text), fail closed.
-const SIGNATURE_OPTIONAL_MIME = new Set(['application/msword']);
+// audio/webm is also frequently unresolved by file-type (it's a generic
+// Matroska/EBML container with no stable magic bytes across encoders) — same
+// fail-open treatment as application/msword rather than blocking every
+// legitimate browser-recorded voice note.
+const SIGNATURE_OPTIONAL_MIME = new Set(['application/msword', 'audio/webm']);
 
 export const uploadAttachmentHandler = asyncHandler(async (req, res) => {
   if (!req.file) throw new AppError('No file provided', 422);

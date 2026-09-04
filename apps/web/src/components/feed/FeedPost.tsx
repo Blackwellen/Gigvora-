@@ -9,6 +9,7 @@ import { Popover, PopoverTrigger, PopoverContent, usePopoverClose } from '@/comp
 import { ReactionBar } from './ReactionBar';
 import { CommentThread } from './CommentThread';
 import { PostShareMenu } from './PostShareMenu';
+import { ReportModal } from './ReportModal';
 import { useDeletePost, useVotePoll, useNotInterested, useHideAuthor, useHideTopic, type FeedPostData } from '@/hooks/useFeed';
 import { usePostRealtimeReconciliation } from '@/hooks/useFeedSocket';
 import { getApiErrorMessage } from '@/lib/api';
@@ -206,6 +207,7 @@ function MenuActions({ post, isAuthor, onDelete }: { post: FeedPostData; isAutho
   const hideAuthor = useHideAuthor();
   const hideTopic = useHideTopic();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   return (
     <div className="py-1">
@@ -303,13 +305,21 @@ function MenuActions({ post, isAuthor, onDelete }: { post: FeedPostData; isAutho
               Hide topic: #{topic}
             </button>
           ))}
-          <button type="button" onClick={close} className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-800">
+          <button
+            type="button"
+            onClick={() => {
+              setReportOpen(true);
+              close();
+            }}
+            className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-800"
+          >
             Report post
           </button>
         </>
       )}
 
       {feedback && <p className="px-3 py-1.5 text-xs text-red-600">{feedback}</p>}
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} objectType="post" objectId={post.id} />
     </div>
   );
 }

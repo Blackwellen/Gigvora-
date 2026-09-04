@@ -775,12 +775,16 @@ export async function listComments(postId, { parentCommentId = null, limit = 20,
 
   const authorIds = [...new Set(rows.map((r) => r.author_id))];
   const commentIds = rows.map((r) => r.id);
-  const [authors, replyCounts] = await Promise.all([
+  const [authors, replyCounts, reactionRows, viewerReactions] = await Promise.all([
     db('users').whereIn('id', authorIds).select('id', 'first_name', 'last_name', 'headline'),
     db('post_comments').whereIn('parent_comment_id', commentIds).whereNull('deleted_at').where('status', 'published').groupBy('parent_comment_id').select('parent_comment_id').count('id as count'),
+    db('comment_reactions').whereIn('comment_id', commentIds).select('comment_id').count('id as count').groupBy('comment_id'),
+    viewerId ? db('comment_reactions').whereIn('comment_id', commentIds).andWhere({ actor_person_id: viewerId }).select('comment_id', 'reaction_type') : Promise.resolve([]),
   ]);
   const authorById = Object.fromEntries(authors.map((a) => [a.id, a]));
   const replyCountByParent = Object.fromEntries(replyCounts.map((r) => [r.parent_comment_id, Number(r.count)]));
+  const reactionCountByComment = Object.fromEntries(reactionRows.map((r) => [r.comment_id, Number(r.count)]));
+  const viewerReactionByComment = Object.fromEntries(viewerReactions.map((r) => [r.comment_id, r.reaction_type]));
 
   return rows.map((row) => ({
     id: row.id,
@@ -790,16 +794,19 @@ export async function listComments(postId, { parentCommentId = null, limit = 20,
       ? { id: row.author_id, name: `${authorById[row.author_id].first_name} ${authorById[row.author_id].last_name}`, headline: authorById[row.author_id].headline }
       : null,
     body: row.content,
+    attachments: row.attachments || [],
     createdAt: row.created_at,
     editedAt: row.edited_at,
     replyCount: replyCountByParent[row.id] || 0,
+    reactionCount: reactionCountByComment[row.id] || 0,
+    viewerReaction: viewerReactionByComment[row.id] || null,
     status: row.status,
     pendingReview: row.status === 'under_review',
   }));
 }
 
-export async function createComment(userId, postId, { body, parentCommentId = null }) {
-  if (!body?.trim()) throw new AppError('Comment cannot be empty', 422);
+export async function createComment(userId, postId, { body, parentCommentId = null, attachments = [] }) {
+  if (!body?.trim() && (!attachments || attachments.length === 0)) throw new AppError('Comment cannot be empty', 422);
   const post = await db('posts').where({ id: postId }).first();
   if (!post || post.deleted_at) throw new AppError('Post not found', 404);
 
@@ -808,18 +815,24 @@ export async function createComment(userId, postId, { body, parentCommentId = nu
     if (!parent) throw new AppError('Parent comment not found', 404);
   }
 
+  const ATTACHMENT_TYPES = new Set(['gif', 'image', 'audio']);
+  const cleanAttachments = (attachments || [])
+    .filter((a) => a && ATTACHMENT_TYPES.has(a.type) && typeof a.url === 'string')
+    .slice(0, 1) // one attachment per comment, matching the composer
+    .map((a) => ({ type: a.type, url: a.url, width: a.width || null, height: a.height || null, durationSeconds: a.durationSeconds || null, provider: a.provider || null, providerId: a.providerId || null }));
+
   // Synchronous, short-timeout, fail-open moderation screen (same contract
   // as createPost/createArticle). A hold_for_review verdict no longer
   // rejects the comment outright — it's created with status 'under_review'
   // (hidden from other viewers' threads, still visible to its own author
   // with a pending-review indicator) and queued in content_moderation_actions
   // for an admin to approve or remove, matching posts/articles parity.
-  const moderationResult = await screenContent({ text: body, authorId: userId, objectType: 'comment' });
+  const moderationResult = body?.trim() ? await screenContent({ text: body, authorId: userId, objectType: 'comment' }) : null;
   const status = moderationResult?.label === 'hold_for_review' ? 'under_review' : 'published';
 
   const comment = await db.transaction(async (trx) => {
     const [row] = await trx('post_comments')
-      .insert({ post_id: postId, author_id: userId, content: body, parent_comment_id: parentCommentId, status })
+      .insert({ post_id: postId, author_id: userId, content: body || '', parent_comment_id: parentCommentId, attachments: JSON.stringify(cleanAttachments), status })
       .returning('*');
     if (status === 'published') await trx('posts').where({ id: postId }).increment('comment_count', 1);
     if (status === 'under_review') {
@@ -890,6 +903,69 @@ export async function deleteComment(userId, commentId) {
     const fresh = await db('posts').where({ id: comment.post_id }).first('comment_count');
     await publishFeedEvent('post:comment_count_updated', { postId: comment.post_id, commentCount: fresh?.comment_count ?? 0 }, [`post:${comment.post_id}`]);
   }
+}
+
+export async function reactToComment(userId, commentId, reactionType) {
+  if (!REACTION_TYPES.has(reactionType)) throw new AppError('Invalid reaction type', 422);
+  const comment = await db('post_comments').where({ id: commentId }).first();
+  if (!comment || comment.deleted_at) throw new AppError('Comment not found', 404);
+
+  const isNewReaction = await db.transaction(async (trx) => {
+    const existing = await trx('comment_reactions').where({ comment_id: commentId, actor_person_id: userId }).first();
+    if (existing) {
+      await trx('comment_reactions').where({ id: existing.id }).update({ reaction_type: reactionType, updated_at: trx.fn.now() });
+      return false;
+    }
+    await trx('comment_reactions').insert({ comment_id: commentId, actor_person_id: userId, reaction_type: reactionType });
+    return true;
+  });
+
+  if (isNewReaction && comment.author_id !== userId) {
+    const actor = await db('users').where({ id: userId }).first('first_name', 'last_name');
+    await notify({
+      userId: comment.author_id,
+      actorId: userId,
+      type: 'comment.reaction',
+      payload: { actorName: actor ? `${actor.first_name} ${actor.last_name}` : 'Someone', postId: comment.post_id, commentId, reactionType, deepLink: `/app/post-detail/${comment.post_id}` },
+    });
+  }
+
+  const fresh = await db('comment_reactions').where({ comment_id: commentId }).count('id as c').first();
+  return { reactionType, reactionCount: Number(fresh?.c || 0) };
+}
+
+export async function removeCommentReaction(userId, commentId) {
+  await db('comment_reactions').where({ comment_id: commentId, actor_person_id: userId }).del();
+  const fresh = await db('comment_reactions').where({ comment_id: commentId }).count('id as c').first();
+  return { reactionCount: Number(fresh?.c || 0) };
+}
+
+/**
+ * "Share this comment" — reposts a comment's content as a new top-level post
+ * that links back to the original post/comment, distinct from sharePost()
+ * (which reposts a whole post). No `original_post_id`-shaped table fits a
+ * comment (that FK targets `posts`), hence the separate `comment_shares`
+ * table (§migration 161) rather than overloading post_shares.
+ */
+export async function shareComment(userId, commentId, { comment: quoteText } = {}) {
+  const original = await db('post_comments').where({ id: commentId }).first();
+  if (!original || original.deleted_at) throw new AppError('Comment not found', 404);
+
+  return db.transaction(async (trx) => {
+    const contentParts = [quoteText?.trim(), `"${original.content}"`].filter(Boolean);
+    const [newPost] = await trx('posts')
+      .insert({
+        author_id: userId,
+        content: contentParts.join('\n\n'),
+        visibility: 'public',
+        post_type: 'text',
+        media: '[]',
+      })
+      .returning('*');
+
+    await trx('comment_shares').insert({ comment_id: commentId, actor_person_id: userId, new_post_id: newPost.id });
+    return newPost;
+  });
 }
 
 export async function sharePost(userId, postId, { shareType = 'repost', comment, destinationConversationId } = {}) {

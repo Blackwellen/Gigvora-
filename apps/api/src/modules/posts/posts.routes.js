@@ -18,6 +18,10 @@ import {
   updateCommentHandler,
   deleteCommentHandler,
   sharePostHandler,
+  reactToCommentHandler,
+  unreactToCommentHandler,
+  shareCommentHandler,
+  searchGifsHandler,
   savePostHandler,
   unsavePostHandler,
   votePollHandler,
@@ -66,6 +70,10 @@ router.get('/posts/:id/comments', listCommentsHandler);
 router.post('/posts/:id/comments', createCommentHandler);
 router.patch('/comments/:commentId', updateCommentHandler);
 router.delete('/comments/:commentId', deleteCommentHandler);
+router.post('/comments/:commentId/reactions', reactToCommentHandler);
+router.delete('/comments/:commentId/reactions', unreactToCommentHandler);
+router.post('/comments/:commentId/share', shareCommentHandler);
+router.get('/gifs/search', searchGifsHandler);
 
 router.post('/posts/:id/share', sharePostHandler);
 router.post('/posts/:id/save', savePostHandler);
