@@ -31,6 +31,7 @@ export type PmProject = {
   version: number;
   createdAt: string;
   updatedAt: string;
+  openToBids: boolean;
   myRole?: PmMemberRole;
   taskCount?: number;
   taskDoneCount?: number;
@@ -38,6 +39,29 @@ export type PmProject = {
   memberCount?: number;
   milestoneCount?: number;
 };
+
+// Public-safe project shape — GET /pm-projects/marketplace and the
+// non-member branch of GET /pm-projects/:id/brief. Deliberately narrower
+// than PmProject: no budget/status/member/version fields, since these are
+// visible to people who are not (yet) project members.
+export type PmPublicProject = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  countryCode: string | null;
+  clientName: string | null;
+  targetEndDate: string | null;
+  createdAt: string;
+  isMember?: false;
+};
+
+// GET /pm-projects/:id/brief returns either the public shape above (when
+// the viewer isn't a member) or the full PmProject (when they are) — this
+// union lets the brief page branch on `isMember` to decide whether to show
+// the apply form or a link into the full project workspace.
+export type PmProjectBrief = PmPublicProject | (PmProject & { isMember: true });
 
 export type PmMilestone = {
   id: string;

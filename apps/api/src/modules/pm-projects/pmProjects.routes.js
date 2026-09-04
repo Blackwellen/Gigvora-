@@ -27,9 +27,13 @@ router.use(requireAuth, resolveWorkspaceContext);
 
 router.get('/', c.listProjectsHandler);
 router.post('/', c.createProjectHandler);
+// Marketplace discovery routes must be registered before the '/:id' catch-all
+// below — otherwise Express would treat "marketplace" as an :id value.
+router.get('/marketplace', c.listMarketplaceProjectsHandler);
 router.get('/:id', c.getProjectHandler);
 router.patch('/:id', c.updateProjectHandler);
 router.delete('/:id', c.deleteProjectHandler);
+router.get('/:id/brief', c.getProjectBriefHandler);
 
 router.get('/:id/members', c.listMembersHandler);
 router.post('/:id/members', c.addMemberHandler);

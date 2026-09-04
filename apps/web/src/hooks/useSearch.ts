@@ -3,7 +3,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
-export type SearchEntityType = 'people' | 'companies' | 'gigs' | 'posts';
+export type SearchEntityType = 'people' | 'companies' | 'gigs' | 'posts' | 'projects';
 
 export type PersonResult = { id: string; first_name: string; last_name: string; headline: string | null; account_type: string };
 export type CompanyResult = { id: string; name: string; slug: string; logo_url: string | null; industry: string | null };
@@ -19,12 +19,24 @@ export type GigResult = {
   created_at: string;
 };
 export type PostResult = { id: string; content: string; created_at: string; author_id: string; first_name: string; last_name: string };
+export type ProjectResult = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  country_code: string | null;
+  client_name: string | null;
+  target_end_date: string | null;
+  created_at: string;
+};
 
 export type SearchAllResults = {
   people: PersonResult[];
   companies: CompanyResult[];
   gigs: GigResult[];
   posts: PostResult[];
+  projects: ProjectResult[];
 };
 
 export type ResultOf<T extends SearchEntityType> = T extends 'people'
@@ -33,7 +45,9 @@ export type ResultOf<T extends SearchEntityType> = T extends 'people'
     ? CompanyResult
     : T extends 'gigs'
       ? GigResult
-      : PostResult;
+      : T extends 'projects'
+        ? ProjectResult
+        : PostResult;
 
 type PagedResponse<T> = { items: T[]; limit: number; offset: number; hasMore: boolean };
 

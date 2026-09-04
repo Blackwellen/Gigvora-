@@ -28,16 +28,31 @@ export async function searchCompanies(query) {
 }
 
 /**
+ * Public-safe pm_projects search shared by searchAll()'s small preview and
+ * searchByType()'s paginated "projects" tab, and equivalent to the fields
+ * GET /pm-projects/marketplace exposes — never leaks budget/member data,
+ * and only ever surfaces projects an owner/manager opted into the
+ * marketplace (open_to_bids = true, status = 'active').
+ */
+function projectsSearchQuery(query) {
+  return db('pm_projects as p')
+    .where('p.open_to_bids', true)
+    .andWhere('p.status', 'active')
+    .andWhere((qb) => qb.whereILike('p.name', `%${query}%`).orWhereILike('p.description', `%${query}%`))
+    .select('p.id', 'p.name', 'p.slug', 'p.description', 'p.category', 'p.country_code', 'p.client_name', 'p.target_end_date', 'p.created_at');
+}
+
+/**
  * Unified, permission-safe cross-entity search for the Command Palette /
  * Universal Search overlays. Every branch selects only public-safe columns
  * (no password_hash etc.) — never SELECT * across an unfiltered join here.
  */
 export async function searchAll(query, { limit = 8, viewerId } = {}) {
   if (!query || query.trim().length < 2) {
-    return { people: [], companies: [], gigs: [], posts: [] };
+    return { people: [], companies: [], gigs: [], posts: [], projects: [] };
   }
 
-  const [people, companies, gigs, posts] = await Promise.all([
+  const [people, companies, gigs, posts, projects] = await Promise.all([
     db('users')
       .whereILike('first_name', `%${query}%`)
       .orWhereILike('last_name', `%${query}%`)
@@ -59,9 +74,10 @@ export async function searchAll(query, { limit = 8, viewerId } = {}) {
       .orderBy('p.created_at', 'desc')
       .limit(limit)
       .select('p.id', 'p.content', 'p.created_at', 'u.first_name', 'u.last_name'),
+    projectsSearchQuery(query).limit(limit),
   ]);
 
-  return { people, companies, gigs, posts };
+  return { people, companies, gigs, posts, projects };
 }
 
 const MAX_TYPE_LIMIT = 50;
@@ -130,6 +146,13 @@ export async function searchByType(type, query, opts = {}) {
         .limit(limit + 1)
         .offset(offset)
         .select('p.id', 'p.content', 'p.created_at', 'p.author_id', 'u.first_name', 'u.last_name');
+      return paginate(rows, limit, offset);
+    }
+    case 'projects': {
+      const rows = await projectsSearchQuery(trimmed)
+        .orderBy('p.created_at', 'desc')
+        .limit(limit + 1)
+        .offset(offset);
       return paginate(rows, limit, offset);
     }
     default:

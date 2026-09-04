@@ -38,10 +38,32 @@ export function serializeProject(row, extra = {}) {
     targetEndDate: row.target_end_date,
     actualEndDate: row.actual_end_date,
     progressPct: row.progress_pct,
+    openToBids: Boolean(row.open_to_bids),
     version: row.version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     ...extra,
+  };
+}
+
+/**
+ * Public-safe, non-member view of a project — backs the marketplace listing
+ * (GET /pm-projects/marketplace) and the single-project brief
+ * (GET /pm-projects/:id/brief). Deliberately excludes anything internal:
+ * no budget/financial fields, no member list, no ids of who owns/manages it
+ * beyond the display-only clientName the project itself opted to show.
+ */
+export function serializePublicProject(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    description: row.description,
+    category: row.category,
+    countryCode: row.country_code,
+    clientName: row.client_name,
+    targetEndDate: row.target_end_date,
+    createdAt: row.created_at,
   };
 }
 

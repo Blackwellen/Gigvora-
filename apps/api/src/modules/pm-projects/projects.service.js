@@ -1,7 +1,7 @@
 import { db } from '../../db/connection.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { emitEvent } from '../../common/events/outbox.js';
-import { getProjectOrThrow, loadProjectContext, serializeProject } from './shared.js';
+import { getProjectOrThrow, loadProjectContext, serializeProject, serializePublicProject } from './shared.js';
 import { canEditProject, canDeleteProject, assertPermission } from './permissions.js';
 import { isValidProjectCategory } from '../../common/taxonomies/projectCategories.js';
 import { isValidCountryCode } from '../../common/taxonomies/countries.js';
@@ -168,7 +168,7 @@ export async function updateProject(projectId, userId, patch) {
     }
 
     const update = { updated_by: userId, version: project.version + 1 };
-    for (const field of ['name', 'description', 'status', 'projectType', 'category', 'countryCode', 'clientName', 'startDate', 'targetEndDate', 'actualEndDate', 'progressPct']) {
+    for (const field of ['name', 'description', 'status', 'projectType', 'category', 'countryCode', 'clientName', 'startDate', 'targetEndDate', 'actualEndDate', 'progressPct', 'openToBids']) {
       if (field in patch) {
         const column = field.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
         update[column] = field === 'countryCode' && patch[field] ? patch[field].toUpperCase() : patch[field];
@@ -195,6 +195,69 @@ export async function deleteProject(projectId, userId) {
     await trx('pm_projects').where({ id: projectId }).del();
     await emitEvent({ aggregateType: 'pm_project', aggregateId: projectId, eventType: 'project.deleted', payload: {} }, trx);
   });
+}
+
+/**
+ * Marketplace discovery — projects an owner/manager has explicitly opted
+ * into bidding (open_to_bids = true) and that are actively accepting work.
+ * Deliberately requires no membership: this is the discovery surface a
+ * freelancer who isn't on the project yet needs in order to find it and
+ * submit a proposal via POST /pm-projects/:id/bids. Only public-safe fields
+ * are selected/returned — see serializePublicProject.
+ */
+export async function listMarketplaceProjects({ category, countryCode, search, page = 1, pageSize = 20 } = {}) {
+  if (category !== undefined && category !== null && category !== '' && !isValidProjectCategory(category)) {
+    throw new AppError(`"${category}" is not a recognized project category`, 422, { code: 'INVALID_CATEGORY' });
+  }
+  if (countryCode !== undefined && countryCode !== null && countryCode !== '' && !isValidCountryCode(countryCode)) {
+    throw new AppError(`"${countryCode}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+  }
+
+  const query = db('pm_projects as p').where('p.open_to_bids', true).andWhere('p.status', 'active');
+  if (category) query.andWhere('p.category', category);
+  if (countryCode) query.andWhere('p.country_code', countryCode.toUpperCase());
+  if (search) {
+    query.andWhere((qb) => qb.whereILike('p.name', `%${search}%`).orWhereILike('p.description', `%${search}%`));
+  }
+
+  const countRow = await query.clone().count('p.id as count').first();
+  const total = Number(countRow?.count || 0);
+
+  const rows = await query
+    .clone()
+    .select('p.*')
+    .orderBy('p.created_at', 'desc')
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return {
+    data: rows.map((row) => serializePublicProject(row)),
+    pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+  };
+}
+
+/**
+ * Single-project brief — the non-membership-gated counterpart to
+ * getProject(). If the caller is already a member, mirrors the same
+ * serialized shape getProject() would give them (so a member clicking
+ * through from search/marketplace sees the real project, not a stripped
+ * preview of themselves). If they aren't a member, the project must be
+ * open_to_bids or this 404s exactly like a project that doesn't exist —
+ * deliberately not distinguishing "private" from "not found" so a private
+ * project's existence isn't leaked to non-members.
+ */
+export async function getProjectBrief(projectId, userId) {
+  const { project, membership } = await loadProjectContext(projectId, userId);
+
+  if (membership) {
+    return serializeProject(project, { myRole: membership.role, isMember: true });
+  }
+
+  if (!project.open_to_bids) {
+    throw new AppError('Project not found', 404);
+  }
+
+  return { ...serializePublicProject(project), isMember: false };
 }
 
 export { getProjectOrThrow };

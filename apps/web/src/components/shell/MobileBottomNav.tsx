@@ -67,33 +67,46 @@ export function MobileBottomNav() {
           <p className="text-sm font-bold text-ink-900 dark:text-white">More</p>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
-          {tree
-            ?.filter((item) => item.route)
-            .map((item) => (
-              <Link
-                key={item.key}
-                href={item.route!}
-                onClick={() => setMoreOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-800 hover:bg-ink-50 dark:text-ink-100 dark:hover:bg-ink-800"
-              >
-                <NavIcon name={item.iconKey} className="h-4.5 w-4.5 text-ink-400 dark:text-ink-500" />
-                {item.label}
-              </Link>
-            ))}
-          {tree
-            ?.filter((item) => !item.route)
-            .flatMap((item) => item.children.flatMap((section) => section.children))
-            .map((link) => (
-              <Link
-                key={link.key}
-                href={link.route!}
-                onClick={() => setMoreOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-800 hover:bg-ink-50 dark:text-ink-100 dark:hover:bg-ink-800"
-              >
-                <NavIcon name={link.iconKey} className="h-4.5 w-4.5 text-ink-400 dark:text-ink-500" />
-                {link.label}
-              </Link>
-            ))}
+          {tree?.map((item) => {
+            // Every top-level item carries its own `route` (e.g. Work ->
+            // /app/gigs), so a top-level-vs-no-route split can never reach a
+            // mega menu's nested links (Projects Home, Browse Projects, any
+            // Recruiter sub-page, etc.) — they'd be silently unreachable from
+            // this drawer. Instead: a top-level item with sub-links renders
+            // as a group of those links; one with none renders as a single
+            // direct link.
+            const links = item.children.flatMap((section) => section.children);
+            if (links.length === 0) {
+              if (!item.route) return null;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.route}
+                  onClick={() => setMoreOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-800 hover:bg-ink-50 dark:text-ink-100 dark:hover:bg-ink-800"
+                >
+                  <NavIcon name={item.iconKey} className="h-4.5 w-4.5 text-ink-400 dark:text-ink-500" />
+                  {item.label}
+                </Link>
+              );
+            }
+            return (
+              <div key={item.key} className="mb-3">
+                <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wide text-ink-400 dark:text-ink-500">{item.label}</p>
+                {links.map((link) => (
+                  <Link
+                    key={link.key}
+                    href={link.route || '#'}
+                    onClick={() => setMoreOpen(false)}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-800 hover:bg-ink-50 dark:text-ink-100 dark:hover:bg-ink-800"
+                  >
+                    <NavIcon name={link.iconKey} className="h-4.5 w-4.5 text-ink-400 dark:text-ink-500" />
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            );
+          })}
         </div>
       </Drawer>
     </>

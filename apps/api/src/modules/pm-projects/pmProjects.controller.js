@@ -25,6 +25,21 @@ export const listProjectsHandler = asyncHandler(async (req, res) => {
   res.json(result);
 });
 export const getProjectHandler = h((req) => projects.getProject(req.params.id, req.user.sub));
+
+// Marketplace discovery (no membership required) — see projects.service.js
+// listMarketplaceProjects/getProjectBrief for why these are separate from
+// listProjects/getProject rather than a mode flag on them.
+export const listMarketplaceProjectsHandler = asyncHandler(async (req, res) => {
+  const result = await projects.listMarketplaceProjects({
+    category: req.query.category,
+    countryCode: req.query.countryCode,
+    search: req.query.search,
+    page: req.query.page ? Number(req.query.page) : undefined,
+    pageSize: req.query.pageSize ? Number(req.query.pageSize) : undefined,
+  });
+  res.json(result);
+});
+export const getProjectBriefHandler = h((req) => projects.getProjectBrief(req.params.id, req.user.sub));
 export const createProjectHandler = asyncHandler(async (req, res) => {
   const data = await projects.createProject(req.user.sub, req.body);
   res.status(201).json({ data });

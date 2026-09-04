@@ -58,15 +58,24 @@ const SECTIONS = {
     {
       key: 'live-feed.engage', title: 'Engage', order: 0,
       links: [
-        { key: 'live-feed.feed', label: 'Feed', route: '/app/live-feed', description: 'Real-time updates and activity', iconKey: 'activity' },
-        { key: 'live-feed.following', label: 'Following', route: '/app/live-feed?feed=following', description: 'Posts from people you follow', iconKey: 'user-check' },
+        { key: 'live-feed.feed', label: 'Live Feed', route: '/app/live-feed', description: 'Real-time updates and activity', iconKey: 'activity' },
+        { key: 'live-feed.following', label: 'Following', route: '/app/following-feed', description: 'Posts from people you follow', iconKey: 'user-check' },
+        { key: 'live-feed.network', label: 'Network', route: '/app/network-feed', description: 'Updates from your connections', iconKey: 'users' },
+        { key: 'live-feed.recommended', label: 'Recommended', route: '/app/recommended-feed', description: 'Personalized suggestions for you', iconKey: 'sparkles' },
         { key: 'live-feed.mentions', label: 'Mentions', route: '/app/live-feed?feed=mentions', description: 'Where you were mentioned', iconKey: 'at-sign' },
+      ],
+    },
+    {
+      key: 'live-feed.discover', title: 'Discover', order: 1,
+      links: [
+        { key: 'live-feed.trending', label: 'Trending', route: '/app/trending', description: 'What’s trending across Gigvora', iconKey: 'trending-up' },
         { key: 'live-feed.saved', label: 'Saved', route: '/app/saved-items?type=posts', description: 'Bookmarked posts', iconKey: 'bookmark' },
       ],
     },
     {
-      key: 'live-feed.mine', title: 'My content', order: 1,
+      key: 'live-feed.mine', title: 'My content', order: 2,
       links: [
+        { key: 'live-feed.create', label: 'Create Post', route: '/app/create-post', description: 'Share an update, article, or poll', iconKey: 'edit-3' },
         { key: 'live-feed.my-posts', label: 'My Posts', route: '/app/live-feed?feed=mine', description: 'Everything you have posted', iconKey: 'file' },
         { key: 'live-feed.drafts', label: 'Drafts', route: '/app/live-feed?feed=drafts', description: 'Unpublished drafts', iconKey: 'edit-3' },
         { key: 'live-feed.scheduled', label: 'Scheduled', route: '/app/live-feed?feed=scheduled', description: 'Posts scheduled to publish', iconKey: 'clock' },
@@ -160,7 +169,12 @@ const SECTIONS = {
         { key: 'work.job-search', label: 'Job Search', route: '/app/job-search', description: 'Search open roles', iconKey: 'search' },
         { key: 'work.recommended-jobs', label: 'Recommended Jobs', route: '/app/recommended-jobs', description: 'Jobs matched to your profile', iconKey: 'sparkles' },
         { key: 'work.gig-marketplace', label: 'Gig Marketplace', route: '/app/gigs', description: 'Browse open gigs', iconKey: 'zap' },
-        { key: 'work.project-marketplace', label: 'Project Marketplace', route: '/app/projects', description: 'Browse open projects', iconKey: 'folder' },
+        // Domain 18 project marketplace — projects an owner/manager has
+        // marked open_to_bids. Was previously pointed at a route that never
+        // had a page (/app/projects, 404 for every user); now points at the
+        // real browse page.
+        { key: 'work.project-marketplace', label: 'Browse Projects', route: '/app/project-search', description: 'Find open projects seeking proposals', iconKey: 'folder' },
+        { key: 'work.freelancer-search', label: 'Find Freelancers', route: '/app/freelancer-search', description: 'Search professionals by skill, location & availability', iconKey: 'search' },
       ],
     },
     {

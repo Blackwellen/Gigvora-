@@ -26,6 +26,7 @@ function ProjectSettingsInner() {
   const [transferTo, setTransferTo] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [bidsError, setBidsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (project) {
@@ -55,7 +56,18 @@ function ProjectSettingsInner() {
   }
 
   const isOwner = project?.myRole === 'owner';
+  const canManage = isOwner || project?.myRole === 'manager';
   const otherAcceptedMembers = (members || []).filter((m) => m.role !== 'owner' && m.invitationStatus === 'accepted');
+
+  async function handleToggleOpenToBids() {
+    if (!project) return;
+    setBidsError(null);
+    try {
+      await updateProject.mutateAsync({ openToBids: !project.openToBids });
+    } catch (err) {
+      setBidsError(getApiErrorMessage(err));
+    }
+  }
 
   return (
     <ProjectShell projectId={projectId} activeTab="settings">
@@ -90,6 +102,32 @@ function ProjectSettingsInner() {
               </Button>
             </form>
           </Card>
+
+          {canManage && (
+            <Card>
+              <CardHeader title="Marketplace visibility" />
+              <div className="px-5 pb-5 pt-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink-100 p-3 dark:border-ink-800">
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900 dark:text-white">Open to bids</p>
+                    <p className="max-w-md text-xs text-ink-400 dark:text-ink-500">
+                      When enabled, this project appears in Browse Projects and search results for freelancers who
+                      aren&rsquo;t members yet, and they can submit proposals.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={project.openToBids ? 'outline' : 'primary'}
+                    onClick={handleToggleOpenToBids}
+                    loading={updateProject.isPending}
+                  >
+                    {project.openToBids ? 'Turn off' : 'Open to bids'}
+                  </Button>
+                </div>
+                {bidsError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{bidsError}</p>}
+              </div>
+            </Card>
+          )}
 
           {isOwner && (
             <Card className="border-red-200 dark:border-red-500/30">

@@ -44,7 +44,7 @@ export const PROFILE_TABS = [
   { key: 'education', label: 'Education', href: '/app/education' },
   { key: 'certifications', label: 'Certifications', href: '/app/certifications' },
   { key: 'portfolio', label: 'Portfolio', href: '/app/portfolio' },
-  { key: 'projects', label: 'Projects', href: '/app/projects' },
+  { key: 'projects', label: 'Projects', href: '/app/projects-home' },
   { key: 'services', label: 'Services', href: '/app/services' },
   { key: 'recommendations', label: 'Recommendations', href: '/app/recommendations' },
   { key: 'reviews', label: 'Reviews', href: '/app/reviews' },

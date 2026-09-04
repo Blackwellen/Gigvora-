@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Briefcase, Building2, FileText, MapPin } from 'lucide-react';
+import { Briefcase, Building2, FileText, MapPin, FolderKanban } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
-import type { CompanyResult, GigResult, PersonResult, PostResult } from '@/hooks/useSearch';
+import type { CompanyResult, GigResult, PersonResult, PostResult, ProjectResult } from '@/hooks/useSearch';
 
 const rowClass =
   'flex items-center gap-3 rounded-xl border border-ink-100 bg-white p-3 transition-colors hover:border-brand-200 hover:shadow-surface dark:border-ink-800 dark:bg-ink-900';
@@ -83,6 +83,31 @@ export function GigRow({ gig }: { gig: GigResult }) {
           )}
         </span>
       </span>
+    </Link>
+  );
+}
+
+export function ProjectRow({ project }: { project: ProjectResult }) {
+  return (
+    <Link href={`/app/project-brief?projectId=${project.id}`} className={rowClass}>
+      {iconTile(<FolderKanban className="h-5 w-5" />)}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-ink-900 dark:text-white">{project.name}</span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ink-500 dark:text-ink-400">
+          {project.category && <span>{project.category}</span>}
+          {project.country_code && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> {project.country_code}
+              </span>
+            </>
+          )}
+        </span>
+      </span>
+      <Badge tone="brand" className="shrink-0">
+        Open to bids
+      </Badge>
     </Link>
   );
 }

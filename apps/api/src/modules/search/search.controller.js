@@ -27,7 +27,7 @@ export const removeSavedSearchHandler = [
   }),
 ];
 
-const ENTITY_TYPES = ['people', 'companies', 'gigs', 'posts'];
+const ENTITY_TYPES = ['people', 'companies', 'gigs', 'posts', 'projects'];
 
 export const searchAllHandler = asyncHandler(async (req, res) => {
   const { q = '', type, limit, offset, location, workMode, sort } = req.query;

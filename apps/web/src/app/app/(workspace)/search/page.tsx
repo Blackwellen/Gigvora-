@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { AlertTriangle, Briefcase, Building2, FileText, Loader2, Search, Users2 } from 'lucide-react';
+import { AlertTriangle, Briefcase, Building2, FileText, FolderKanban, Loader2, Search, Users2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { GigFilterBar } from '@/components/search/GigFilterBar';
 import { RecentSearchChips } from '@/components/search/RecentSearchChips';
 import { SearchTypePanel } from '@/components/search/SearchTypePanel';
-import { CompanyRow, GigRow, PersonRow, PostRow } from '@/components/search/SearchResultRows';
+import { CompanyRow, GigRow, PersonRow, PostRow, ProjectRow } from '@/components/search/SearchResultRows';
 import { addRecentSearch, getRecentSearches, clearRecentSearches, useSearchAll } from '@/hooks/useSearch';
 import type { GigFilters } from '@/hooks/useSearch';
 
@@ -17,6 +17,7 @@ const TABS = [
   { key: 'companies', label: 'Companies' },
   { key: 'gigs', label: 'Gigs' },
   { key: 'posts', label: 'Posts' },
+  { key: 'projects', label: 'Projects' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -55,10 +56,11 @@ export default function SearchResultsPage() {
       companies: allResults?.companies.length || 0,
       gigs: allResults?.gigs.length || 0,
       posts: allResults?.posts.length || 0,
+      projects: allResults?.projects.length || 0,
     }),
     [allResults]
   );
-  const allCount = counts.people + counts.companies + counts.gigs + counts.posts;
+  const allCount = counts.people + counts.companies + counts.gigs + counts.posts + counts.projects;
 
   function updateUrl(next: { q?: string; type?: TabKey }) {
     const params = new URLSearchParams(searchParams.toString());
@@ -198,6 +200,14 @@ export default function SearchResultsPage() {
                     ))}
                   </ResultSection>
                 )}
+
+                {counts.projects > 0 && (
+                  <ResultSection title="Projects" icon={FolderKanban} onSeeAll={() => updateUrl({ type: 'projects' })}>
+                    {allResults!.projects.map((p) => (
+                      <ProjectRow key={p.id} project={p} />
+                    ))}
+                  </ResultSection>
+                )}
               </div>
             </>
           )}
@@ -216,6 +226,9 @@ export default function SearchResultsPage() {
             />
           )}
           {tab === 'posts' && <SearchTypePanel type="posts" q={q} entityLabel="Posts" renderItem={(p) => <PostRow key={p.id} post={p} />} />}
+          {tab === 'projects' && (
+            <SearchTypePanel type="projects" q={q} entityLabel="Projects" renderItem={(p) => <ProjectRow key={p.id} project={p} />} />
+          )}
         </>
       )}
     </div>
