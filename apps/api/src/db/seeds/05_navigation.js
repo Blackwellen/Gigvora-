@@ -112,6 +112,21 @@ const SECTIONS = {
         { key: 'network.saved-searches', label: 'Saved Searches', route: '/app/saved-items?type=searches', description: 'Searches you have saved', iconKey: 'bookmark' },
       ],
     },
+    {
+      // Domain 28 — Networking, Speed Networking & Professional Connections.
+      key: 'network.live-networking', title: 'Live Networking', order: 3,
+      links: [
+        { key: 'network.networking-home', label: 'Networking Home', route: '/app/networking', description: 'Live sessions and intelligent introductions', iconKey: 'radio' },
+        { key: 'network.speed-networking', label: 'Speed Networking', route: '/app/speed-networking', description: 'Rotating timed 1:1 video rounds', iconKey: 'zap' },
+        { key: 'network.upcoming-sessions', label: 'Upcoming Sessions', route: '/app/networking/explore', description: 'Browse and filter networking sessions', iconKey: 'calendar' },
+        { key: 'network.my-sessions', label: 'My Sessions', route: '/app/networking/my-sessions', description: 'Sessions you have registered for', iconKey: 'ticket' },
+        { key: 'network.people-met', label: 'People You Met', route: '/app/networking/people-met', description: 'Everyone you have networked with', iconKey: 'users-round' },
+        { key: 'network.business-cards', label: 'Business Cards', route: '/app/networking/business-cards', description: 'Cards exchanged in live sessions', iconKey: 'id-card' },
+        { key: 'network.networking-calendar', label: 'Networking Calendar', route: '/app/networking/calendar', description: 'Sessions you are attending or hosting', iconKey: 'calendar-days' },
+        { key: 'network.networking-alerts', label: 'Search Alerts', route: '/app/networking/alerts', description: 'Get notified about matching new sessions', iconKey: 'bell' },
+        { key: 'network.create-session', label: 'Host a Session', route: '/app/networking/create/new', description: 'Create a networking or speed networking session', iconKey: 'plus-circle' },
+      ],
+    },
   ],
 
   // Community consolidates the old standalone Pages and Groups top-level
@@ -362,9 +377,18 @@ const SECTIONS = {
       ],
     },
     {
+      // Consumer/discovery podcast pages landed under apps/web/src/app/app/
+      // (workspace)/podcasts/* (Discover, Explore, Following, Saved) and
+      // .../podcast/[showId]/* (show + episode detail) — this section now
+      // links out to all of the listener-facing ones, not just the home page.
+      // "My Podcasts" points at the creator-studio list of shows I host
+      // (GET /podcasts/mine), a separate build.
       key: 'interactive.podcasts', title: 'Podcasts', order: 3,
       links: [
-        { key: 'interactive.podcasts-browse', label: 'Browse Podcasts', route: '/app/podcasts', description: 'Listen to shows on Gigvora', iconKey: 'video' },
+        { key: 'interactive.podcasts-discover', label: 'Discover', route: '/app/podcasts', description: 'Listen to shows on Gigvora', iconKey: 'video' },
+        { key: 'interactive.podcasts-following', label: 'Following', route: '/app/podcasts/following', description: 'Shows you follow', iconKey: 'rss' },
+        { key: 'interactive.podcasts-saved', label: 'Saved', route: '/app/podcasts/saved', description: 'Episodes saved for later', iconKey: 'bookmark' },
+        { key: 'interactive.podcasts-mine', label: 'My Podcasts', route: '/app/podcasts/mine', description: 'Shows you host', iconKey: 'mic' },
       ],
     },
   ],

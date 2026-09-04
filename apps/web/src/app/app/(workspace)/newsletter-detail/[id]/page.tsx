@@ -29,7 +29,7 @@ export default function NewsletterDetailPage({ params }: { params: Promise<{ id:
   const [shareOpen, setShareOpen] = useState(false);
 
   return (
-    <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-6">
+    <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-6">
       <main className="min-w-0 space-y-4">
         <div className="flex items-center gap-3">
           <Link

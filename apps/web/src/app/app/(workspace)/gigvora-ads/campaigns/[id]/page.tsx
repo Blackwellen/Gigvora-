@@ -52,7 +52,7 @@ export default function AdCampaignDetailPage({ params }: { params: Promise<{ id:
   const pct = campaign.totalBudgetCents > 0 ? Math.min(100, Math.round((campaign.spentCents / campaign.totalBudgetCents) * 100)) : 0;
 
   return (
-    <div className="mx-auto max-w-[1100px] px-4 py-6 lg:px-6">
+    <div className="mx-auto max-w-[1320px] px-4 py-6 lg:px-6">
       <Link href="/app/gigvora-ads/campaigns" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-ink-800 dark:text-ink-400 dark:hover:text-ink-100">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to campaigns
       </Link>

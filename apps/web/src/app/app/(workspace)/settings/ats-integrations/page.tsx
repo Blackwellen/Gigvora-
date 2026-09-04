@@ -193,7 +193,7 @@ function AtsIntegrationsInner() {
   const detail = connections?.find((c) => c.id === detailId) || null;
 
   return (
-    <div className="mx-auto max-w-[1100px] px-4 py-5 lg:px-6">
+    <div className="mx-auto max-w-[1320px] px-4 py-5 lg:px-6">
       <Link
         href="/app/recruiter-pro-home"
         className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-500 hover:text-brand-600 dark:text-ink-400 dark:hover:text-brand-400"

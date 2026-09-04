@@ -12,7 +12,7 @@ const TABS = [{ key: 'recommended' as const, label: 'For you' }];
 
 export default function RecommendedFeedPage() {
   return (
-    <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-5 px-4 py-5 lg:grid-cols-[280px_minmax(0,1fr)_320px] lg:px-6">
+    <div className="mx-auto grid max-w-[1520px] grid-cols-1 gap-5 px-4 py-5 lg:grid-cols-[280px_minmax(0,1fr)_320px] lg:px-6">
       <aside className="hidden lg:block">
         <div className="sticky top-20">
           <ProfileSummaryCard />
