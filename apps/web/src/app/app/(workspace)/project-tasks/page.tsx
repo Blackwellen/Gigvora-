@@ -8,6 +8,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal, ModalHeader } from '@/components/ui/Modal';
+import { TagPicker } from '@/components/ui/TagPicker';
 import { ProjectShell } from '@/components/projects/ProjectShell';
 import { TaskPriorityBadge, TaskStatusBadge } from '@/components/projects/ProjectStatusBadge';
 import { useProjectTasks, useCreateTask, useUpdateTask, sortBySuggestedOrderClient } from '@/hooks/projects/useProjectTasks';
@@ -112,6 +113,7 @@ function TasksInner() {
                       <th className="px-4 py-3 font-medium">Priority</th>
                       <th className="px-4 py-3 font-medium">Due date</th>
                       <th className="px-4 py-3 font-medium">Estimate</th>
+                      <th className="px-4 py-3 font-medium">Tags</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -173,6 +175,16 @@ function TaskRow({ task, projectId }: { task: PmTask; projectId: string }) {
         {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : '—'}
       </td>
       <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{task.estimateHours ? `${task.estimateHours}h` : '—'}</td>
+      <td className="px-4 py-3">
+        <div className="flex flex-wrap gap-1">
+          {task.labels.length === 0 && <span className="text-ink-400 dark:text-ink-500">—</span>}
+          {task.labels.map((label) => (
+            <span key={label} className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-medium text-ink-600 dark:bg-ink-800 dark:text-ink-300">
+              {label}
+            </span>
+          ))}
+        </div>
+      </td>
     </tr>
   );
 }
@@ -199,14 +211,16 @@ function CreateTaskModal({ projectId, open, onClose }: { projectId: string; open
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<PmTaskPriority>('medium');
   const [dueDate, setDueDate] = useState('');
+  const [labels, setLabels] = useState<string[]>([]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    await createTask.mutateAsync({ title, priority, dueDate: dueDate || undefined });
+    await createTask.mutateAsync({ title, priority, dueDate: dueDate || undefined, labels: labels.length ? labels : undefined });
     setTitle('');
     setDueDate('');
     setPriority('medium');
+    setLabels([]);
     onClose();
   }
 
@@ -236,6 +250,10 @@ function CreateTaskModal({ projectId, open, onClose }: { projectId: string; open
             <label className="mb-1 block text-xs font-semibold text-ink-500 dark:text-ink-400">Due date</label>
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink-500 dark:text-ink-400">Tags</label>
+          <TagPicker value={labels} onChange={setLabels} placeholder="Search or add a tag..." />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>

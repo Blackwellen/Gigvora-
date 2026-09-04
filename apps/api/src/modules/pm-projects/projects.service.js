@@ -3,6 +3,8 @@ import { AppError } from '../../common/errors/AppError.js';
 import { emitEvent } from '../../common/events/outbox.js';
 import { getProjectOrThrow, loadProjectContext, serializeProject } from './shared.js';
 import { canEditProject, canDeleteProject, assertPermission } from './permissions.js';
+import { isValidProjectCategory } from '../../common/taxonomies/projectCategories.js';
+import { isValidCountryCode } from '../../common/taxonomies/countries.js';
 
 function slugify(name) {
   return (
@@ -27,13 +29,15 @@ async function uniqueSlug(name, trx = db) {
   return candidate;
 }
 
-export async function listProjects(userId, { status, search, sort = 'updated_desc', page = 1, pageSize = 20 } = {}) {
+export async function listProjects(userId, { status, search, category, countryCode, sort = 'updated_desc', page = 1, pageSize = 20 } = {}) {
   const query = db('pm_projects as p')
     .join('pm_project_members as m', 'm.project_id', 'p.id')
     .where('m.user_id', userId)
     .andWhere('m.invitation_status', 'accepted');
 
   if (status) query.andWhere('p.status', status);
+  if (category) query.andWhere('p.category', category);
+  if (countryCode) query.andWhere('p.country_code', countryCode.toUpperCase());
   if (search) {
     query.andWhere((qb) => qb.whereILike('p.name', `%${search}%`).orWhereILike('p.client_name', `%${search}%`));
   }
@@ -108,8 +112,14 @@ export async function getProject(projectId, userId) {
 }
 
 export async function createProject(userId, input) {
-  const { name, description, projectType = 'internal', clientName, startDate, targetEndDate, workspaceType = 'personal', companyId } = input;
+  const { name, description, projectType = 'internal', category, countryCode, clientName, startDate, targetEndDate, workspaceType = 'personal', companyId } = input;
   if (!name || !name.trim()) throw new AppError('Project name is required', 422);
+  if (category !== undefined && category !== null && !isValidProjectCategory(category)) {
+    throw new AppError(`"${category}" is not a recognized project category`, 422, { code: 'INVALID_CATEGORY' });
+  }
+  if (countryCode !== undefined && countryCode !== null && !isValidCountryCode(countryCode)) {
+    throw new AppError(`"${countryCode}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+  }
 
   return db.transaction(async (trx) => {
     const slug = await uniqueSlug(name, trx);
@@ -122,6 +132,8 @@ export async function createProject(userId, input) {
         slug,
         description: description || null,
         project_type: projectType,
+        category: category || null,
+        country_code: countryCode ? countryCode.toUpperCase() : null,
         client_name: clientName || null,
         start_date: startDate || null,
         target_end_date: targetEndDate || null,
@@ -148,11 +160,18 @@ export async function updateProject(projectId, userId, patch) {
     const { project, membership } = await loadProjectContext(projectId, userId, trx);
     assertPermission(canEditProject(membership), 'You do not have permission to edit this project');
 
+    if (patch.category !== undefined && patch.category !== null && !isValidProjectCategory(patch.category)) {
+      throw new AppError(`"${patch.category}" is not a recognized project category`, 422, { code: 'INVALID_CATEGORY' });
+    }
+    if (patch.countryCode !== undefined && patch.countryCode !== null && !isValidCountryCode(patch.countryCode)) {
+      throw new AppError(`"${patch.countryCode}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+    }
+
     const update = { updated_by: userId, version: project.version + 1 };
-    for (const field of ['name', 'description', 'status', 'projectType', 'clientName', 'startDate', 'targetEndDate', 'actualEndDate', 'progressPct']) {
+    for (const field of ['name', 'description', 'status', 'projectType', 'category', 'countryCode', 'clientName', 'startDate', 'targetEndDate', 'actualEndDate', 'progressPct']) {
       if (field in patch) {
         const column = field.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
-        update[column] = patch[field];
+        update[column] = field === 'countryCode' && patch[field] ? patch[field].toUpperCase() : patch[field];
       }
     }
 

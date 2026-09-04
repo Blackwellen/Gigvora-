@@ -17,6 +17,8 @@ export type PmProject = {
   description: string | null;
   status: PmProjectStatus;
   projectType: PmProjectType;
+  category: string | null;
+  countryCode: string | null;
   workspaceType: 'personal' | 'organization';
   companyId: string | null;
   ownerId: string;

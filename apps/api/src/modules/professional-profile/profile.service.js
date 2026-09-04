@@ -2,6 +2,7 @@ import { db } from '../../db/connection.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { emitEvent } from '../../common/events/outbox.js';
 import { getProfileRow, recomputeCompleteness } from './shared.js';
+import { isValidCountryCode } from '../../common/taxonomies/countries.js';
 
 function toHero(user, profile) {
   return {
@@ -13,6 +14,7 @@ function toHero(user, profile) {
     avatarUrl: profile.avatar_url || null,
     coverUrl: profile.cover_url || null,
     location: profile.location || null,
+    countryCode: profile.country_code || null,
     timezone: profile.timezone || null,
     industry: profile.industry || null,
     availabilityStatus: profile.availability_status,

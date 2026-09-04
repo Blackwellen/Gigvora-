@@ -14,6 +14,9 @@ import { registerFeedRealtimeBridge, registerFeedHandlers } from './handlers/fee
 import { registerAiRealtimeBridge } from './handlers/aiBridge.js';
 import { registerProjectRealtimeBridge, registerProjectHandlers } from './handlers/projectHandlers.js';
 import { registerJobsRealtimeBridge, registerJobsHandlers } from './handlers/jobs.js';
+import { registerBusinessRealtimeBridge, registerBusinessHandlers } from './handlers/business.js';
+import { registerRecruiterRealtimeBridge, registerRecruiterHandlers } from './handlers/recruiter.js';
+import { registerRecruiterProRealtimeBridge, registerRecruiterProHandlers } from './handlers/recruiterPro.js';
 
 export function createSocketServer(httpServer) {
   const io = new Server(httpServer, {
@@ -44,6 +47,9 @@ export function createSocketServer(httpServer) {
   registerAiRealtimeBridge(io);
   registerProjectRealtimeBridge(io);
   registerJobsRealtimeBridge(io);
+  registerBusinessRealtimeBridge(io);
+  registerRecruiterRealtimeBridge(io);
+  registerRecruiterProRealtimeBridge(io);
   registerNotificationsRealtimeBridge(io);
 
   io.on('connection', (socket) => {
@@ -57,6 +63,9 @@ export function createSocketServer(httpServer) {
     registerFeedHandlers(io, socket);
     registerProjectHandlers(io, socket);
     registerJobsHandlers(io, socket);
+    registerBusinessHandlers(io, socket);
+    registerRecruiterHandlers(io, socket);
+    registerRecruiterProHandlers(io, socket);
 
     socket.on('disconnect', () => {
       socket.leave(`user:${socket.user.sub}`);

@@ -9,8 +9,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
+import { CountrySelect } from '@/components/ui/CountrySelect';
 import { ProjectShell } from '@/components/projects/ProjectShell';
 import { useInviteToProject } from '@/hooks/projects/useProjectBids';
+import { useCountries } from '@/hooks/useTaxonomies';
 import { api, getApiErrorMessage } from '@/lib/api';
 
 type TalentSummary = {
@@ -24,11 +26,11 @@ type TalentSummary = {
   availability: 'available' | 'not_available';
 };
 
-function useTalentSearch(q: string) {
+function useTalentSearch(q: string, location?: string) {
   return useQuery({
-    queryKey: ['public-talent-search', q],
+    queryKey: ['public-talent-search', q, location],
     queryFn: async () => {
-      const { data } = await api.get<{ items: TalentSummary[] }>('/public/talent', { params: { q: q || undefined, availableOnly: true } });
+      const { data } = await api.get<{ items: TalentSummary[] }>('/public/talent', { params: { q: q || undefined, location: location || undefined, availableOnly: true } });
       return data.items;
     },
   });
@@ -37,8 +39,11 @@ function useTalentSearch(q: string) {
 function InviteInner() {
   const projectId = useSearchParams().get('projectId') || undefined;
   const [query, setQuery] = useState('');
+  const [countryCode, setCountryCode] = useState<string | null>(null);
+  const { data: countries } = useCountries();
+  const countryFilterName = countries?.find((c) => c.code === countryCode)?.name;
   const [invited, setInvited] = useState<Set<string>>(new Set());
-  const { data: results, isLoading } = useTalentSearch(query);
+  const { data: results, isLoading } = useTalentSearch(query, countryFilterName);
   const invite = useInviteToProject(projectId);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,9 +60,12 @@ function InviteInner() {
   return (
     <ProjectShell projectId={projectId} activeTab="bids">
       <Card className="p-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search professionals by name, skill, or role" className="pl-9" />
+        <div className="flex flex-wrap gap-2">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search professionals by name, skill, or role" className="pl-9" />
+          </div>
+          <CountrySelect value={countryCode} onChange={setCountryCode} emptyLabel="Any country" className="sm:w-56" />
         </div>
       </Card>
 

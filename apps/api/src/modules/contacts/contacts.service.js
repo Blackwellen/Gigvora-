@@ -1,6 +1,7 @@
 import { db } from '../../db/connection.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { normalizeEmail, normalizePhone } from '../../common/utils/normalize.js';
+import { isValidCountryCode } from '../../common/taxonomies/countries.js';
 
 const TABLE = 'contacts';
 
@@ -31,7 +32,14 @@ export async function getById(owner, id) {
   return record;
 }
 
+function validateCountryCode(countryCode) {
+  if (countryCode !== undefined && countryCode !== null && !isValidCountryCode(countryCode)) {
+    throw new AppError(`"${countryCode}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+  }
+}
+
 export async function create(owner, data) {
+  validateCountryCode(data.countryCode);
   const [record] = await db(TABLE)
     .insert({
       owner_type: owner.ownerType,
@@ -44,6 +52,7 @@ export async function create(owner, data) {
       company_name: data.companyName ?? null,
       title: data.title ?? null,
       location: data.location ?? null,
+      country_code: data.countryCode ? data.countryCode.toUpperCase() : null,
       tags: JSON.stringify(data.tags ?? []),
       source: 'manual',
     })
@@ -52,6 +61,7 @@ export async function create(owner, data) {
 }
 
 export async function update(owner, id, data) {
+  validateCountryCode(data.countryCode);
   const patch = {};
   if ('firstName' in data) patch.first_name = data.firstName;
   if ('lastName' in data) patch.last_name = data.lastName;
@@ -60,6 +70,7 @@ export async function update(owner, id, data) {
   if ('companyName' in data) patch.company_name = data.companyName;
   if ('title' in data) patch.title = data.title;
   if ('location' in data) patch.location = data.location;
+  if ('countryCode' in data) patch.country_code = data.countryCode ? data.countryCode.toUpperCase() : null;
   if ('tags' in data) patch.tags = JSON.stringify(data.tags);
   patch.updated_at = db.fn.now();
 

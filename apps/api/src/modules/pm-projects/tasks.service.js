@@ -36,8 +36,11 @@ export async function getBoard(projectId, userId) {
 export async function createTask(projectId, userId, input) {
   return db.transaction(async (trx) => {
     await assertProjectAccess(projectId, userId, trx);
-    const { title, description, priority = 'medium', assigneeId, dueDate, startDate, estimateHours, milestoneId, deliverableId, parentTaskId, boardColumn = 'todo' } = input;
+    const { title, description, priority = 'medium', assigneeId, dueDate, startDate, estimateHours, milestoneId, deliverableId, parentTaskId, boardColumn = 'todo', labels } = input;
     if (!title || !title.trim()) throw new AppError('Task title is required', 422);
+    if (labels !== undefined && (!Array.isArray(labels) || labels.some((l) => typeof l !== 'string'))) {
+      throw new AppError('labels must be an array of strings', 422);
+    }
 
     const maxOrderRow = await trx('pm_tasks').where({ project_id: projectId, board_column: boardColumn }).max('board_order as max').first();
     const boardOrder = (maxOrderRow?.max ?? -1) + 1;
@@ -58,6 +61,7 @@ export async function createTask(projectId, userId, input) {
         estimate_hours: estimateHours ?? null,
         board_column: boardColumn,
         board_order: boardOrder,
+        labels: JSON.stringify(labels || []),
         created_by: userId,
       })
       .returning('*');
@@ -75,11 +79,15 @@ export async function updateTask(projectId, userId, taskId, patch) {
     const existing = await trx('pm_tasks').where({ id: taskId, project_id: projectId }).first();
     if (!existing) throw new AppError('Task not found', 404);
 
+    if (patch.labels !== undefined && (!Array.isArray(patch.labels) || patch.labels.some((l) => typeof l !== 'string'))) {
+      throw new AppError('labels must be an array of strings', 422);
+    }
+
     const update = { version: existing.version + 1 };
-    for (const field of ['title', 'description', 'status', 'priority', 'assigneeId', 'dueDate', 'startDate', 'estimateHours', 'milestoneId', 'deliverableId']) {
+    for (const field of ['title', 'description', 'status', 'priority', 'assigneeId', 'dueDate', 'startDate', 'estimateHours', 'milestoneId', 'deliverableId', 'labels']) {
       if (field in patch) {
         const column = field.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
-        update[column] = patch[field];
+        update[column] = field === 'labels' ? JSON.stringify(patch[field]) : patch[field];
       }
     }
 

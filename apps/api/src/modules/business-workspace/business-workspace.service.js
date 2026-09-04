@@ -1,10 +1,11 @@
 import { db } from '../../db/connection.js';
 import { AppError } from '../../common/errors/AppError.js';
+import { isValidCountryCode } from '../../common/taxonomies/countries.js';
 
 const COMPANY_TABLE = 'companies';
 const ROLES_TABLE = 'business_roles';
 
-const WRITABLE_COMPANY_FIELDS = ['name', 'description', 'logo_url', 'website', 'industry', 'size'];
+const WRITABLE_COMPANY_FIELDS = ['name', 'description', 'logo_url', 'website', 'industry', 'size', 'location', 'country_code'];
 const WRITABLE_ROLE_FIELDS = ['name', 'description', 'permissions'];
 
 function pickFields(body = {}, allowed) {
@@ -18,7 +19,7 @@ function pickFields(body = {}, allowed) {
 export async function getWorkspace(companyId) {
   const company = await db(COMPANY_TABLE)
     .where({ id: companyId })
-    .first('id', 'name', 'slug', 'description', 'logo_url', 'website', 'industry', 'size', 'created_at');
+    .first('id', 'name', 'slug', 'description', 'logo_url', 'website', 'industry', 'size', 'location', 'country_code', 'created_at');
   if (!company) throw new AppError('Business workspace not found', 404);
 
   const [memberCountRow, teamCountRow, departmentCountRow, openJobsCountRow] = await Promise.all([
@@ -43,6 +44,10 @@ export async function updateWorkspace(companyId, role, data) {
   }
 
   const fields = pickFields(data, WRITABLE_COMPANY_FIELDS);
+  if (fields.country_code !== undefined && fields.country_code !== null && !isValidCountryCode(fields.country_code)) {
+    throw new AppError(`"${fields.country_code}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+  }
+  if (fields.country_code) fields.country_code = fields.country_code.toUpperCase();
   if (Object.keys(fields).length === 0) return getWorkspace(companyId);
 
   const [record] = await db(COMPANY_TABLE).where({ id: companyId }).update(fields).returning('*');

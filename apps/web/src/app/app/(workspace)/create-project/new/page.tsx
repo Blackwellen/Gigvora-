@@ -6,6 +6,9 @@ import { Check, ChevronLeft, ChevronRight, FolderPlus } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { CategorySelect } from '@/components/ui/CategorySelect';
+import { CountrySelect } from '@/components/ui/CountrySelect';
+import { useCountries } from '@/hooks/useTaxonomies';
 import { useCreateProject } from '@/hooks/projects/useProjects';
 import { getApiErrorMessage } from '@/lib/api';
 import type { PmProjectType } from '@/hooks/projects/types';
@@ -16,18 +19,22 @@ type FormState = {
   name: string;
   description: string;
   projectType: PmProjectType;
+  category: string | null;
+  countryCode: string | null;
   clientName: string;
   startDate: string;
   targetEndDate: string;
 };
 
-const INITIAL: FormState = { name: '', description: '', projectType: 'internal', clientName: '', startDate: '', targetEndDate: '' };
+const INITIAL: FormState = { name: '', description: '', projectType: 'internal', category: null, countryCode: null, clientName: '', startDate: '', targetEndDate: '' };
 
 export default function CreateProjectPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(INITIAL);
   const createProject = useCreateProject();
+  const { data: countries } = useCountries();
+  const countryLabel = countries?.find((c) => c.code === form.countryCode)?.name || form.countryCode || '—';
 
   const canAdvance = step === 0 ? form.name.trim().length > 0 : true;
 
@@ -36,6 +43,8 @@ export default function CreateProjectPage() {
       name: form.name,
       description: form.description || undefined,
       projectType: form.projectType,
+      category: form.category || undefined,
+      countryCode: form.countryCode || undefined,
       clientName: form.clientName || undefined,
       startDate: form.startDate || undefined,
       targetEndDate: form.targetEndDate || undefined,
@@ -111,6 +120,16 @@ export default function CreateProjectPage() {
               <label className="mb-1 block text-xs font-semibold text-ink-500 dark:text-ink-400">Client name (optional)</label>
               <Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} placeholder="e.g. Acme Corporation" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ink-500 dark:text-ink-400">Category</label>
+                <CategorySelect value={form.category} onChange={(category) => setForm({ ...form, category })} emptyLabel="Select a category" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ink-500 dark:text-ink-400">Country</label>
+                <CountrySelect value={form.countryCode} onChange={(countryCode) => setForm({ ...form, countryCode })} emptyLabel="Select a country" />
+              </div>
+            </div>
           </div>
         )}
 
@@ -132,6 +151,8 @@ export default function CreateProjectPage() {
             <ReviewRow label="Name" value={form.name} />
             <ReviewRow label="Type" value={form.projectType} />
             <ReviewRow label="Client" value={form.clientName || '—'} />
+            <ReviewRow label="Category" value={form.category || '—'} />
+            <ReviewRow label="Country" value={countryLabel} />
             <ReviewRow label="Start date" value={form.startDate || '—'} />
             <ReviewRow label="Target end date" value={form.targetEndDate || '—'} />
             {createProject.isError && <p className="pt-2 text-sm text-red-600 dark:text-red-400">{getApiErrorMessage(createProject.error)}</p>}

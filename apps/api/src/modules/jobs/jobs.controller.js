@@ -2,9 +2,9 @@ import { asyncHandler } from '../../common/utils/asyncHandler.js';
 import * as service from './jobs.service.js';
 
 export const listHandler = asyncHandler(async (req, res) => {
-  const { q, location, work_mode, employment_type, category, seniority, salary_min, salary_max, sort, limit, offset, status } = req.query;
+  const { q, location, work_mode, employment_type, category, country_code, seniority, salary_min, salary_max, sort, limit, offset, status } = req.query;
   const result = await service.list({
-    q, location, work_mode, employment_type, category, seniority, salary_min, salary_max, sort,
+    q, location, work_mode, employment_type, category, country_code, seniority, salary_min, salary_max, sort,
     status: status || 'open',
     limit: limit ? Number(limit) : undefined,
     offset: offset ? Number(offset) : undefined,

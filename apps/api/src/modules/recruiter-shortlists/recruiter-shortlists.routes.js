@@ -1,0 +1,27 @@
+import { Router } from 'express';
+import { requireAuth } from '../../common/middleware/auth.js';
+import { requireRecruiterSeat } from '../../common/middleware/recruiterSeat.js';
+import {
+  listHandler,
+  getHandler,
+  createHandler,
+  updateHandler,
+  removeHandler,
+  addMemberHandler,
+  updateMemberHandler,
+  removeMemberHandler,
+} from './recruiter-shortlists.controller.js';
+
+const router = Router();
+router.use(requireAuth, requireRecruiterSeat);
+
+router.get('/', listHandler);
+router.post('/', createHandler);
+router.get('/:id', getHandler);
+router.patch('/:id', updateHandler);
+router.delete('/:id', removeHandler);
+router.post('/:id/members', addMemberHandler);
+router.patch('/:id/members/:memberId', updateMemberHandler);
+router.delete('/:id/members/:memberId', removeMemberHandler);
+
+export default router;

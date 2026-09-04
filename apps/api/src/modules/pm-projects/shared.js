@@ -27,6 +27,8 @@ export function serializeProject(row, extra = {}) {
     description: row.description,
     status: row.status,
     projectType: row.project_type,
+    category: row.category,
+    countryCode: row.country_code,
     workspaceType: row.workspace_type,
     companyId: row.company_id,
     ownerId: row.owner_id,

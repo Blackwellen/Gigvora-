@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Tabs } from '@/components/ui/Tabs';
+import { CategorySelect } from '@/components/ui/CategorySelect';
+import { CountrySelect } from '@/components/ui/CountrySelect';
 import { ProjectStatusBadge } from '@/components/projects/ProjectStatusBadge';
 import { ProjectProgressRing } from '@/components/projects/ProjectProgressRing';
 import { useProjects } from '@/hooks/projects/useProjects';
@@ -24,7 +26,14 @@ const STATUS_TABS = [
 export default function ProjectsHomePage() {
   const [status, setStatus] = useState<(typeof STATUS_TABS)[number]['key']>('all');
   const [search, setSearch] = useState('');
-  const { data, isLoading, isError, error } = useProjects({ status: status === 'all' ? undefined : status, search: search || undefined });
+  const [category, setCategory] = useState<string | null>(null);
+  const [countryCode, setCountryCode] = useState<string | null>(null);
+  const { data, isLoading, isError, error } = useProjects({
+    status: status === 'all' ? undefined : status,
+    search: search || undefined,
+    category: category || undefined,
+    countryCode: countryCode || undefined,
+  });
 
   const projects = data?.data || [];
 
@@ -51,6 +60,10 @@ export default function ProjectsHomePage() {
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search projects by name or client" className="pl-9" />
           </div>
           <Tabs tabs={STATUS_TABS.map((t) => ({ ...t }))} value={status} onChange={(k) => setStatus(k as typeof status)} />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 sm:w-64">
+          <CategorySelect value={category} onChange={setCategory} className="sm:w-48" />
+          <CountrySelect value={countryCode} onChange={setCountryCode} className="sm:w-48" />
         </div>
       </Card>
 
@@ -91,6 +104,7 @@ export default function ProjectsHomePage() {
                 <tr>
                   <th className="px-4 py-3 font-medium">Project</th>
                   <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Category</th>
                   <th className="px-4 py-3 font-medium">Progress</th>
                   <th className="px-4 py-3 font-medium">Due date</th>
                   <th className="px-4 py-3 font-medium">Tasks</th>
@@ -109,6 +123,7 @@ export default function ProjectsHomePage() {
                     <td className="px-4 py-3">
                       <ProjectStatusBadge status={project.status} />
                     </td>
+                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{project.category || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <ProjectProgressRing percent={project.progressPct} size={28} />

@@ -7,6 +7,8 @@ import type { PmProject, PmProjectType } from './types';
 export type ProjectsFilter = {
   status?: string;
   search?: string;
+  category?: string;
+  countryCode?: string;
   sort?: 'updated_desc' | 'name_asc' | 'due_asc';
   page?: number;
   pageSize?: number;
@@ -27,7 +29,16 @@ export function useProjects(filter: ProjectsFilter = {}) {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; description?: string; projectType?: PmProjectType; clientName?: string; startDate?: string; targetEndDate?: string }) => {
+    mutationFn: async (input: {
+      name: string;
+      description?: string;
+      projectType?: PmProjectType;
+      category?: string;
+      countryCode?: string;
+      clientName?: string;
+      startDate?: string;
+      targetEndDate?: string;
+    }) => {
       const { data } = await api.post<{ data: PmProject }>('/pm-projects', input);
       return data.data;
     },

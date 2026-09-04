@@ -16,6 +16,8 @@ export const listProjectsHandler = asyncHandler(async (req, res) => {
   const result = await projects.listProjects(req.user.sub, {
     status: req.query.status,
     search: req.query.search,
+    category: req.query.category,
+    countryCode: req.query.countryCode,
     sort: req.query.sort,
     page: req.query.page ? Number(req.query.page) : undefined,
     pageSize: req.query.pageSize ? Number(req.query.pageSize) : undefined,

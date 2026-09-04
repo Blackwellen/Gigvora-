@@ -92,7 +92,7 @@ export function useCopilot(initialThreadId?: string | null) {
   }, [thread, threadId]);
 
   const createThreadMutation = useMutation({
-    mutationFn: async (input?: string | { title?: string; context?: { projectId?: string } }) => {
+    mutationFn: async (input?: string | { title?: string; context?: { projectId?: string; crmObjectType?: string; crmObjectId?: string } }) => {
       const body = typeof input === 'string' || input === undefined ? { title: input } : input;
       return (await api.post<{ data: CopilotThread }>('/copilot/threads', body)).data.data;
     },
@@ -110,7 +110,7 @@ export function useCopilot(initialThreadId?: string | null) {
   });
 
   const createNewThread = useCallback(
-    async (options?: { title?: string; context?: { projectId?: string } }) => {
+    async (options?: { title?: string; context?: { projectId?: string; crmObjectType?: string; crmObjectId?: string } }) => {
       const created = await createThreadMutation.mutateAsync(options);
       setThreadId(created.id);
       setMessages([]);

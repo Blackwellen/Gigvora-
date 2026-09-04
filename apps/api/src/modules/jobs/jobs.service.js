@@ -1,5 +1,7 @@
 import { db } from '../../db/connection.js';
 import { AppError } from '../../common/errors/AppError.js';
+import { isValidProjectCategory } from '../../common/taxonomies/projectCategories.js';
+import { isValidCountryCode } from '../../common/taxonomies/countries.js';
 
 const TABLE = 'jobs';
 
@@ -18,6 +20,7 @@ const WRITABLE_FIELDS = [
   'expires_at',
   'seniority',
   'category',
+  'country_code',
   'application_deadline',
   'headcount',
 ];
@@ -38,7 +41,7 @@ function pickWritableFields(body = {}) {
 }
 
 function applyFilters(query, filters) {
-  const { q, location, work_mode, employment_type, category, seniority, salary_min, salary_max, status } = filters;
+  const { q, location, work_mode, employment_type, category, country_code, seniority, salary_min, salary_max, status } = filters;
   if (status) query.andWhere('jobs.status', status);
   if (q) {
     query.andWhere((qb) => {
@@ -49,6 +52,7 @@ function applyFilters(query, filters) {
   if (work_mode) query.andWhere('jobs.work_mode', work_mode);
   if (employment_type) query.andWhere('jobs.employment_type', employment_type);
   if (category) query.andWhere('jobs.category', category);
+  if (country_code) query.andWhere('jobs.country_code', String(country_code).toUpperCase());
   if (seniority) query.andWhere('jobs.seniority', seniority);
   if (salary_min) query.andWhere((qb) => qb.whereNull('jobs.salary_max').orWhere('jobs.salary_max', '>=', Number(salary_min)));
   if (salary_max) query.andWhere((qb) => qb.whereNull('jobs.salary_min').orWhere('jobs.salary_min', '<=', Number(salary_max)));
@@ -193,10 +197,22 @@ export async function getById(id, { viewerId, source } = {}) {
   };
 }
 
+function validateTaxonomyFields(fields) {
+  if (fields.category !== undefined && fields.category !== null && !isValidProjectCategory(fields.category)) {
+    throw new AppError(`"${fields.category}" is not a recognized job category`, 422, { code: 'INVALID_CATEGORY' });
+  }
+  if (fields.country_code !== undefined && fields.country_code !== null && !isValidCountryCode(fields.country_code)) {
+    throw new AppError(`"${fields.country_code}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+  }
+}
+
 export async function create(data, { companyId, userId } = {}) {
   if (!companyId) throw new AppError('Switch to a company workspace to post a job', 400, { code: 'WORKSPACE_REQUIRED' });
 
   const fields = pickWritableFields(data);
+  validateTaxonomyFields(fields);
+  if (fields.country_code) fields.country_code = fields.country_code.toUpperCase();
+
   const slug = `${slugify(fields.title || 'job')}-${Date.now().toString(36)}`;
   const payload = {
     ...fields,
@@ -219,6 +235,8 @@ export async function update(id, data, { companyId } = {}) {
   if (companyId && existing.company_id !== companyId) throw new AppError('You do not have access to this job', 403);
 
   const fields = pickWritableFields(data);
+  validateTaxonomyFields(fields);
+  if (fields.country_code) fields.country_code = fields.country_code.toUpperCase();
   if (fields.requirements !== undefined) fields.requirements = JSON.stringify(fields.requirements);
   if (fields.skills !== undefined) fields.skills = JSON.stringify(fields.skills);
   if (fields.status === 'open' && existing.status !== 'open' && !existing.published_at) {

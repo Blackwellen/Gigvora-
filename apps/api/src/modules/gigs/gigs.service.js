@@ -1,5 +1,7 @@
 import { db } from '../../db/connection.js';
 import { AppError } from '../../common/errors/AppError.js';
+import { isValidProjectCategory } from '../../common/taxonomies/projectCategories.js';
+import { isValidCountryCode } from '../../common/taxonomies/countries.js';
 
 const TABLE = 'gigs';
 const SORTABLE_FIELDS = new Set(['created_at', 'rate_min', 'rate_max']);
@@ -16,11 +18,12 @@ function baseQuery() {
 }
 
 function applyFilters(query, filters = {}) {
-  const { q, role, location, workMode, rateType, rateMin, rateMax, durationMax, experienceLevel, skills, postedSince } = filters;
+  const { q, role, location, countryCode, workMode, rateType, rateMin, rateMax, durationMax, experienceLevel, skills, postedSince } = filters;
 
   if (q) query.andWhere((b) => b.whereILike('gigs.title', `%${q}%`).orWhereILike('gigs.description', `%${q}%`));
   if (role) query.andWhereILike('gigs.title', `%${role}%`);
   if (location) query.andWhereILike('gigs.location', `%${location}%`);
+  if (countryCode) query.andWhere('gigs.country_code', String(countryCode).toUpperCase());
   if (workMode) query.andWhere('gigs.work_mode', workMode);
   if (rateType) query.andWhere('gigs.rate_type', rateType);
   if (rateMin) query.andWhere('gigs.rate_max', '>=', rateMin);
@@ -39,6 +42,7 @@ export async function listPublic({
   q,
   role,
   location,
+  countryCode,
   workMode,
   rateType,
   rateMin,
@@ -56,6 +60,7 @@ export async function listPublic({
     q,
     role,
     location,
+    countryCode,
     workMode,
     rateType,
     rateMin,
@@ -69,6 +74,7 @@ export async function listPublic({
     q,
     role,
     location,
+    countryCode,
     workMode,
     rateType,
     rateMin,
@@ -140,13 +146,28 @@ function toPublicDetail(row) {
   };
 }
 
+function validateTaxonomyFields(data) {
+  if (data.category !== undefined && data.category !== null && !isValidProjectCategory(data.category)) {
+    throw new AppError(`"${data.category}" is not a recognized gig category`, 422, { code: 'INVALID_CATEGORY' });
+  }
+  if (data.country_code !== undefined && data.country_code !== null && !isValidCountryCode(data.country_code)) {
+    throw new AppError(`"${data.country_code}" is not a recognized country code`, 422, { code: 'INVALID_COUNTRY' });
+  }
+}
+
 export async function create(data) {
-  const [record] = await db(TABLE).insert(data).returning('*');
+  validateTaxonomyFields(data);
+  const payload = { ...data };
+  if (payload.country_code) payload.country_code = payload.country_code.toUpperCase();
+  const [record] = await db(TABLE).insert(payload).returning('*');
   return record;
 }
 
 export async function update(id, data) {
-  const [record] = await db(TABLE).where({ id }).update(data).returning('*');
+  validateTaxonomyFields(data);
+  const payload = { ...data };
+  if (payload.country_code) payload.country_code = payload.country_code.toUpperCase();
+  const [record] = await db(TABLE).where({ id }).update(payload).returning('*');
   if (!record) throw new AppError('gig not found', 404);
   return record;
 }

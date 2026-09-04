@@ -20,7 +20,7 @@ export function useProjectTasks(projectId: string | undefined, filter: TaskFilte
 export function useCreateTask(projectId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { title: string; description?: string; priority?: PmTaskPriority; assigneeId?: string; dueDate?: string; boardColumn?: string }) => {
+    mutationFn: async (input: { title: string; description?: string; priority?: PmTaskPriority; assigneeId?: string; dueDate?: string; boardColumn?: string; labels?: string[] }) => {
       const { data } = await api.post<{ data: PmTask }>(`/pm-projects/${projectId}/tasks`, input);
       return data.data;
     },

@@ -6,10 +6,11 @@ import {
   Wallet,
   ServerCog,
   KeyRound,
+  BrainCircuit,
   type LucideIcon,
 } from 'lucide-react';
 
-export type AdminSectionKey = 'overview' | 'users' | 'moderation' | 'support' | 'finance' | 'system' | 'roles';
+export type AdminSectionKey = 'overview' | 'users' | 'moderation' | 'support' | 'finance' | 'system' | 'intelligence' | 'roles';
 
 export type AdminSectionMeta = {
   key: AdminSectionKey;
@@ -66,6 +67,13 @@ export const ADMIN_SECTIONS: Record<AdminSectionKey, AdminSectionMeta> = {
     icon: ServerCog,
     description: 'Monitor platform infrastructure, feature flags, and operational health.',
   },
+  intelligence: {
+    key: 'intelligence',
+    label: 'Intelligence',
+    route: '/admin/intelligence',
+    icon: BrainCircuit,
+    description: 'Manage the models behind matching, ranking, recommendations, parsing, scoring and fraud detection.',
+  },
   roles: {
     key: 'roles',
     label: 'Roles & Permissions',
@@ -75,7 +83,7 @@ export const ADMIN_SECTIONS: Record<AdminSectionKey, AdminSectionMeta> = {
   },
 };
 
-export const ADMIN_SECTION_ORDER: AdminSectionKey[] = ['overview', 'users', 'moderation', 'support', 'finance', 'system', 'roles'];
+export const ADMIN_SECTION_ORDER: AdminSectionKey[] = ['overview', 'users', 'moderation', 'support', 'finance', 'system', 'intelligence', 'roles'];
 
 export const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
