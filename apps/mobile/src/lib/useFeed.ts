@@ -1,6 +1,8 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './apiClient';
 
+export type Attachment = { id?: string; type: 'image' | 'video' | 'document' | 'link_preview'; url: string; fileName?: string | null };
+
 export type FeedPostData = {
   id: string;
   authorId: string;
@@ -12,6 +14,7 @@ export type FeedPostData = {
   createdAt: string;
   myReaction: string | null;
   isSaved: boolean;
+  attachments: Attachment[];
 };
 
 type FeedPage = { items: FeedPostData[]; nextCursor: string | null };
@@ -46,6 +49,12 @@ export function useReactToPost() {
 
 export function useRemoveReaction() {
   return useFeedMutation<{ postId: string }>(({ postId }) => api.delete(`/feed/posts/${postId}/reactions`));
+}
+
+export function useSharePost() {
+  return useFeedMutation<{ postId: string; shareType?: string }>(({ postId, shareType }) =>
+    api.post(`/feed/posts/${postId}/share`, { shareType: shareType ?? 'repost' })
+  );
 }
 
 export type CommentData = {

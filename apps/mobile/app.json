@@ -24,7 +24,19 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#1d5bf5",
+          "dark": {
+            "backgroundColor": "#0b0c10"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import axios from 'axios';
 import { API_URL, getApiErrorMessage } from '../../src/lib/apiClient';
 import { useSession } from '../../src/lib/SessionContext';
@@ -70,6 +71,12 @@ export default function SignInScreen() {
           >
             <Text style={styles.buttonText}>{submitting ? 'Signing in...' : 'Sign in'}</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/sign-up')}>
+            <Text style={styles.linkText}>
+              Don&apos;t have an account? <Text style={styles.linkTextStrong}>Create one</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -103,4 +110,7 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: colors.white, fontWeight: '700', fontSize: 15 },
+  link: { marginTop: spacing.lg, alignItems: 'center' },
+  linkText: { color: colors.ink500, fontSize: 13 },
+  linkTextStrong: { color: colors.brand600, fontWeight: '700' },
 });

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
-import { useMarkConversationRead, useMessages, useSendMessage } from '../../../src/lib/useInbox';
-import { useSession } from '../../../src/lib/SessionContext';
-import { colors, radius, spacing } from '../../../src/lib/theme';
+import { useMarkConversationRead, useMessages, useSendMessage } from '../../../../src/lib/useInbox';
+import { useSession } from '../../../../src/lib/SessionContext';
+import { colors, radius, spacing } from '../../../../src/lib/theme';
 
 export default function ConversationScreen() {
   const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, clearSession, getStoredTokens, storeSession } from './apiClient';
+import { setHasOnboarded } from './onboarding';
 
 export type CurrentUser = {
   id: string;
@@ -46,6 +47,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   async function login(tokens: { accessToken: string; refreshToken: string }) {
     await storeSession(tokens);
+    await setHasOnboarded();
     setHasToken(true);
     await queryClient.invalidateQueries({ queryKey: ['me'] });
   }
