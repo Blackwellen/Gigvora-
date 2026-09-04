@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { PublicPageShell } from '@/components/public/PublicPageShell';
 import { HomeAppPreview } from '@/components/public/home/HomeAppPreview';
+import { AuthedHomeRedirect } from '@/components/public/home/AuthedHomeRedirect';
 import { MetricsRow } from '@/components/public/marketing/MetricsRow';
 import { TrustLogosRow } from '@/components/public/marketing/TrustLogosRow';
 import { TestimonialsGrid } from '@/components/public/marketing/TestimonialsGrid';
@@ -107,6 +108,7 @@ export default async function HomePage({
 
   return (
     <PublicPageShell pageId="02.01">
+      <AuthedHomeRedirect />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <section className="relative overflow-hidden">
