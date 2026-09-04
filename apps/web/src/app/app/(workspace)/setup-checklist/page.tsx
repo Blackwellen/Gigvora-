@@ -54,7 +54,7 @@ export default function SetupChecklistPage() {
   const recommended = items.find((i) => i.status === 'in_progress') ?? items.find((i) => i.status === 'not_started');
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8 lg:px-10">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 lg:px-6">
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">Setup Checklist</h1>

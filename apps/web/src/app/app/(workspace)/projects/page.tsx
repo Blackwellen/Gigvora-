@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Briefcase, FolderKanban, Loader2, MapPin } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
+import { AlertTriangle, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { PageContainer } from '@/components/ui/PageContainer';
 import { api } from '@/lib/api';
+import { ProjectCard, type NormalizedProject } from './ProjectCard';
 
 type ProjectRecord = {
   id: string;
@@ -25,7 +25,7 @@ type ProjectRecord = {
 
 const PAGE_SIZE = 20;
 
-function normalize(project: ProjectRecord) {
+function normalize(project: ProjectRecord): NormalizedProject {
   return {
     id: project.id,
     title: project.title,
@@ -39,14 +39,6 @@ function normalize(project: ProjectRecord) {
   };
 }
 
-function statusTone(status: string): 'brand' | 'neutral' | 'success' | 'warning' {
-  const s = status?.toLowerCase();
-  if (s === 'open' || s === 'active') return 'success';
-  if (s === 'in_progress' || s === 'in progress') return 'brand';
-  if (s === 'closed' || s === 'completed') return 'neutral';
-  return 'warning';
-}
-
 export default function ProjectsPage() {
   const [offset, setOffset] = useState(0);
   const { data, isLoading, isError, refetch } = useQuery({
@@ -57,7 +49,7 @@ export default function ProjectsPage() {
   const projects = (data || []).map(normalize);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 lg:px-0">
+    <PageContainer className="py-6">
       <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900 dark:text-white">
         <FolderKanban className="h-5 w-5" /> Projects
       </h1>
@@ -89,44 +81,9 @@ export default function ProjectsPage() {
       )}
 
       {!isLoading && !isError && projects.length > 0 && (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project.id} className="flex flex-col p-4">
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <h3 className="text-sm font-bold text-ink-900 dark:text-white">{project.title}</h3>
-                <Badge tone={statusTone(project.status)} className="shrink-0 capitalize">
-                  {project.status?.replace(/_/g, ' ')}
-                </Badge>
-              </div>
-              {project.description && (
-                <p className="line-clamp-3 text-sm text-ink-500 dark:text-ink-400">{project.description}</p>
-              )}
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-400 dark:text-ink-500">
-                {project.category && (
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="h-3 w-3" /> {project.category}
-                  </span>
-                )}
-                {(project.location || project.isRemote) && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {project.location || (project.isRemote ? 'Remote' : '')}
-                    {project.location && project.isRemote ? ' · Remote' : ''}
-                  </span>
-                )}
-              </div>
-              {project.skills.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {project.skills.slice(0, 4).map((skill) => (
-                    <Badge key={skill} tone="neutral">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              {project.postedByName && (
-                <p className="mt-3 text-xs text-ink-400 dark:text-ink-500">Posted by {project.postedByName}</p>
-              )}
-            </Card>
+            <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       )}
@@ -141,6 +98,6 @@ export default function ProjectsPage() {
           </Button>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
