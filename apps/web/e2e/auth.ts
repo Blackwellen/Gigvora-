@@ -12,6 +12,18 @@ import type { Page } from '@playwright/test';
  */
 let cachedTokens: { accessToken: string; refreshToken: string } | null = null;
 
+/** Node's `fetch()` (used here and by specs that call the API directly) does
+ * NOT pick up Playwright's browser-context `httpCredentials` — that only
+ * covers requests made through a `page`. When the target environment sits
+ * behind HTTP Basic Auth (PLAYWRIGHT_HTTP_USER/PASS set — see
+ * playwright.config.ts), add the header manually to these raw calls too. */
+export function basicAuthHeaders(): Record<string, string> {
+  const user = process.env.PLAYWRIGHT_HTTP_USER;
+  const pass = process.env.PLAYWRIGHT_HTTP_PASS;
+  if (!user || !pass) return {};
+  return { Authorization: `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}` };
+}
+
 /** Exported so specs that need to call the real API directly (e.g. to resolve
  * a real record id to navigate to, the same way domain18's spec resolves a
  * real project id from the DOM) can reuse the one cached login rather than
@@ -22,7 +34,7 @@ export async function getTokens(): Promise<{ accessToken: string; refreshToken: 
   const apiURL = process.env.PLAYWRIGHT_API_URL || 'http://localhost:4000/api/v1';
   const response = await fetch(`${apiURL}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...basicAuthHeaders() },
     body: JSON.stringify({ email: 'admin@gigvora.com', password: 'Password123!' }),
   });
   if (!response.ok) {

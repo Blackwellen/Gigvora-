@@ -24,7 +24,14 @@ const config: Config = {
           100: '#eceef2',
           200: '#d5d9e2',
           300: '#b1b8c6',
-          400: '#8590a5',
+          // Was #8590a5 — failed WCAG 2 AA color-contrast (axe-core: 3.02-3.22:1
+          // against white/#f7f8fa, needs 4.5:1) wherever used as text, which the
+          // "text-ink-400" convention does across the app for muted/secondary
+          // copy (breadcrumbs, empty states, timestamps, etc.). #647089 clears
+          // 4.5:1 on both white and #f7f8fa; kept it close to the original hue
+          // rather than jumping to ink-500 so it stays visually distinct from
+          // the darker end of the scale as much as the contrast floor allows.
+          400: '#647089',
           500: '#66718a',
           600: '#515b72',
           700: '#424a5d',

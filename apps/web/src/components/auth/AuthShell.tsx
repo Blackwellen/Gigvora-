@@ -18,7 +18,7 @@ export function AuthShell({
         <DecorativeRing />
         {children}
       </main>
-      <footer className="border-t border-gray-100 px-6 py-6 text-center text-xs text-gray-400">
+      <footer className="border-t border-gray-100 px-6 py-6 text-center text-xs text-gray-500">
         © {new Date().getFullYear()} Gigvora, Inc. All rights reserved.
       </footer>
     </div>

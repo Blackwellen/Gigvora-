@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { loginAsAdmin, getTokens } from './auth';
+import { loginAsAdmin, getTokens, basicAuthHeaders } from './auth';
 
 /**
  * Domain 05 (Live Feed, Posts & Social Publishing) automated accessibility
@@ -61,7 +61,7 @@ test.beforeAll(async () => {
   const apiURL = process.env.PLAYWRIGHT_API_URL || 'http://localhost:4000/api/v1';
   const { accessToken } = await getTokens();
   const res = await fetch(`${apiURL}/feed?tab=mine&limit=1`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${accessToken}`, ...basicAuthHeaders() },
   });
   if (res.ok) {
     const body = await res.json();

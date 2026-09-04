@@ -10,6 +10,16 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
+// Optional: when pointing this suite at a real deployed environment that
+// sits behind an HTTP Basic Auth wall (e.g. this repo's staging server —
+// see AGENTS.md), set PLAYWRIGHT_HTTP_USER/PLAYWRIGHT_HTTP_PASS so the
+// browser context authenticates transparently. Unset for a local/dev stack
+// (no wall, no effect).
+const httpCredentials =
+  process.env.PLAYWRIGHT_HTTP_USER && process.env.PLAYWRIGHT_HTTP_PASS
+    ? { username: process.env.PLAYWRIGHT_HTTP_USER, password: process.env.PLAYWRIGHT_HTTP_PASS }
+    : undefined;
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
@@ -19,6 +29,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
     baseURL,
+    httpCredentials,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     viewport: { width: 1440, height: 900 },
