@@ -29,6 +29,52 @@ export async function list({ jobId, applicantId, limit = 20, offset = 0 } = {}) 
   return { items: rows, total: Number(count) };
 }
 
+// "My applications" (16.xx) — the applicant-facing counterpart to `list()`, which is
+// job/owner scoped. Joins jobs + companies for display fields so the frontend can render
+// a list (title, company, status, submitted date) without N+1 lookups.
+export async function listMine({ applicantId, status, limit = 20, offset = 0 } = {}) {
+  if (!applicantId) throw new AppError('applicantId is required', 400);
+
+  const cappedLimit = Math.min(Number(limit) || 20, 50);
+  const cappedOffset = Number(offset) || 0;
+
+  const filter = (qb) => {
+    qb.andWhere('applications.applicant_id', applicantId);
+    if (status) qb.andWhere('applications.status', status);
+  };
+
+  const baseQuery = () => db(TABLE).modify(filter);
+
+  const [rows, [{ count }]] = await Promise.all([
+    baseQuery()
+      .leftJoin('jobs', 'jobs.id', 'applications.job_id')
+      .leftJoin('companies', 'companies.id', 'jobs.company_id')
+      .orderBy('applications.created_at', 'desc')
+      .limit(cappedLimit)
+      .offset(cappedOffset)
+      .select(
+        'applications.id',
+        'applications.job_id',
+        'applications.status',
+        'applications.match_score',
+        'applications.applied_at',
+        'applications.created_at',
+        'applications.updated_at',
+        'jobs.title as job_title',
+        'jobs.location as job_location',
+        'jobs.employment_type as job_employment_type',
+        'jobs.work_mode as job_work_mode',
+        'jobs.status as job_status',
+        'companies.id as company_id',
+        'companies.name as company_name',
+        'companies.logo_url as company_logo_url'
+      ),
+    baseQuery().count({ count: 'applications.id' }),
+  ]);
+
+  return { items: rows, total: Number(count) };
+}
+
 function buildTimeline(application, screeningReviews, interview, offer) {
   const events = [{ stage: 'applied', at: application.applied_at || application.created_at }];
   for (const review of screeningReviews) events.push({ stage: `screening:${review.decision}`, at: review.created_at });

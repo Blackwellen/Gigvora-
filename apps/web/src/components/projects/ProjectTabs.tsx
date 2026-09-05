@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
+import type { PmMemberRole } from '@/hooks/projects/types';
 
 export type ProjectTabKey =
   | 'overview'
@@ -56,16 +57,49 @@ const TAB_CONFIG: Array<{ key: ProjectTabKey; label: string; href: (projectId: s
   { key: 'completion', label: 'Completion', href: (id) => `/app/project-completion?projectId=${id}`, enabled: true },
 ];
 
+// Tabs surfacing project-wide financial/reporting decisions (budget lines,
+// change-request sign-off, cross-task analytics, handover) — a working
+// professional/reviewer/guest doesn't manage these, only owner/manager/
+// client/finance do. Everything not listed here (tasks, board, files, chat,
+// their own payment milestones, bids, risks, dependencies, etc.) stays
+// visible to every accepted member regardless of role.
+const MANAGEMENT_TABS = new Set<ProjectTabKey>(['budget', 'approvals', 'changeRequests', 'analytics', 'completion']);
+// Internal team-ops tabs — capacity planning and project configuration are
+// owner/manager-only, not even shown to the paying client.
+const ADMIN_TABS = new Set<ProjectTabKey>(['resources', 'settings']);
+
+function isTabVisible(tab: ProjectTabKey, role: PmMemberRole | undefined) {
+  if (ADMIN_TABS.has(tab)) return role === 'owner' || role === 'manager';
+  if (MANAGEMENT_TABS.has(tab)) return role === 'owner' || role === 'manager' || role === 'client' || role === 'finance';
+  return true;
+}
+
 /**
  * Route-based project sub-navigation (each tab is a distinct page, unlike
  * ui/Tabs.tsx which switches client-side panels within one page). Every tab
  * is enabled as of Phase B — a tab renders disabled only if a future phase
  * adds a new one ahead of its page shipping, never as a permanent state.
+ * Visibility (as opposed to enabled/disabled) is role-based: this mirrors
+ * apps/api/.../pm-projects/permissions.js's owner/manager-only checks so a
+ * professional/reviewer/guest member never sees a tab that would just 403 —
+ * this is a UI affordance only, the server permission check is still the
+ * real boundary.
  */
-export function ProjectTabs({ projectId, active, counts = {} }: { projectId: string; active: ProjectTabKey; counts?: Partial<Record<ProjectTabKey, number>> }) {
+export function ProjectTabs({
+  projectId,
+  active,
+  counts = {},
+  myRole,
+}: {
+  projectId: string;
+  active: ProjectTabKey;
+  counts?: Partial<Record<ProjectTabKey, number>>;
+  myRole?: PmMemberRole;
+}) {
+  const visibleTabs = TAB_CONFIG.filter((tab) => isTabVisible(tab.key, myRole));
   return (
     <div role="tablist" aria-label="Project sections" className="flex items-center gap-1 overflow-x-auto border-b border-ink-100 dark:border-ink-800">
-      {TAB_CONFIG.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isActive = tab.key === active;
         const count = counts[tab.key];
         const content = (

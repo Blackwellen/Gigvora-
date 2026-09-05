@@ -12,6 +12,17 @@ export const listHandler = asyncHandler(async (req, res) => {
   res.json({ data: result.items, meta: { total: result.total } });
 });
 
+export const listMineHandler = asyncHandler(async (req, res) => {
+  const { status, limit, offset } = req.query;
+  const result = await service.listMine({
+    applicantId: req.user.sub,
+    status: status || undefined,
+    limit: limit ? Number(limit) : undefined,
+    offset: offset ? Number(offset) : undefined,
+  });
+  res.json({ data: result.items, meta: { total: result.total } });
+});
+
 export const getHandler = asyncHandler(async (req, res) => {
   const record = await service.getById(req.params.id);
   res.json({ data: record });

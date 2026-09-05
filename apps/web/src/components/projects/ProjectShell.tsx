@@ -67,7 +67,7 @@ export function ProjectShell({
   return (
     <div className="mx-auto max-w-[1400px] space-y-4 px-4 py-5 lg:px-6">
       <ProjectHeader project={project} members={members || []} actions={actions} />
-      <ProjectTabs projectId={projectId} active={activeTab} counts={tabCounts} />
+      <ProjectTabs projectId={projectId} active={activeTab} counts={tabCounts} myRole={project.myRole} />
       <div className="pt-2">{children}</div>
     </div>
   );
